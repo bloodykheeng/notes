@@ -141,6 +141,9 @@ systemctl status filebrowser.service
 
 Now, FileBrowser will start automatically on server reboot.
 
+access it easily using your ip
+http://172.105.24.194:8080
+
 ---
 
 ## Step 5: Install SSL Certificate for Secure Access

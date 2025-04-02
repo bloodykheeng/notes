@@ -144,6 +144,42 @@ Now, FileBrowser will start automatically on server reboot.
 access it easily using your ip
 http://172.105.24.194:8080
 
+# How to Unzip Files in FileBrowser
+
+## Step 1: Enable the `unzip` Command for Admin Users
+
+1. Navigate to **Settings > User Management**.
+2. Select the **admin** user and click the **edit (pencil icon)**.
+3. Scroll down to **Commands**.
+4. Type `unzip` in the Commands field.
+5. Click **Update** to save changes.
+
+## Step 2: Unzip Files Using FileBrowser
+
+1. Use FileBrowser to locate your **.zip** file.
+2. Open the **console** (click the `< >` toolbar button).
+3. Type the following command:
+   ```sh
+   unzip filename.zip
+   ```
+   _(Replace `filename.zip` with the actual file name)_
+4. Watch the unzip progress – you're done!
+
+## Step 3 (Optional): Set Commands for New Users
+
+1. Go to **Settings > Global Settings**.
+2. Scroll down to **User Default Settings**.
+3. Under **Commands**, type `unzip`.
+4. Click **Update** to apply this setting.
+5. When you create a **new user**, the `unzip` command will be automatically assigned and available.
+
+### Note:
+
+- You are limited to commands available on the host system.
+- If using the `hurlenko/filebrowser` Docker container, the host system is **BusyBox**, which includes a predefined list of commands.
+
+💡 _It would be great to have an "Unzip" button in FileBrowser, but this would require changes to the application itself._
+
 ---
 
 ## Step 5: Install SSL Certificate for Secure Access

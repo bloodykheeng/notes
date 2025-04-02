@@ -146,7 +146,23 @@ http://172.105.24.194:8080
 
 # How to Unzip Files in FileBrowser
 
+first check if unzip is installed on ur system
+
+```bash
+unzip -v
+```
+
+if not installed then istall it using this comand
+
+```
+sudo apt install unzip -y
+```
+
+then after come back to file browser
+
 ## Step 1: Enable the `unzip` Command for Admin Users
+
+https://github.com/filebrowser/filebrowser/discussions/1585
 
 1. Navigate to **Settings > User Management**.
 2. Select the **admin** user and click the **edit (pencil icon)**.

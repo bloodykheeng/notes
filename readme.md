@@ -12,7 +12,7 @@ A collection of technical notes and solutions for various tech setups, including
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/your-username/notes.git
+   git clone https://github.com/bloodykheeng/notes.git
    cd notes
    ```
 2. Browse notes based on your needs.

@@ -139,7 +139,7 @@ nginx -t
 
 ```bash
 cd /var/www/ppda_nextjs_front
-pm install -g pm2
+npm install -g pm2
 pm2 start npm --name ppda_nextjs_front -- start
 ```
 

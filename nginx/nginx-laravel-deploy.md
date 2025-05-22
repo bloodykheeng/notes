@@ -258,6 +258,10 @@ sudo ln -s /usr/share/phpMyAdmin/ /var/www/html
 this will clone folder phpMyAdmin into html then we can point to it using our confs either the default
 conf or any of ur choice
 
+Nb its not really nesssary to create the symbolic link u can just forgo it and u add the conf
+with this as ur root root /usr/share/;
+not this root /var/www/html/;
+
 If PHPMyAdmin is not accessible, configure Nginx:
 
 ```bash
@@ -328,7 +332,36 @@ Restart Nginx:
 sudo systemctl restart nginx
 ```
 
-If you face MySQL login issues:
+---
+
+### 👤 Create a New MySQL User
+
+To create a new user (e.g., `mingo`):
+
+```sql
+CREATE USER 'mingo'@'localhost' IDENTIFIED BY 'Tr3y@1234567';
+```
+
+---
+
+### ✅ Grant All Privileges to the New User
+
+Give full privileges to `mingo` on all databases and tables:
+
+```sql
+GRANT ALL PRIVILEGES ON *.* TO 'mingo'@'localhost';
+```
+
+Apply those privileges:
+
+```sql
+FLUSH PRIVILEGES;
+```
+
+---
+
+this step is not required
+If you still face MySQL login issues:
 enter mysql
 
 ```bash

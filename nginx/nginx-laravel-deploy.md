@@ -170,6 +170,35 @@ chown -R www-data storage
 chown -R www-data bootstrap/cache
 ```
 
+#### 🗂 `public/`
+
+This is the web-accessible root. To allow uploads or public file creation:
+
+```bash
+sudo chown -R www-data:www-data /var/www/ppda_laravel_api/public
+sudo chmod -R 775 /var/www/ppda_laravel_api/public
+```
+
+#### 🗂 `public/file_share_attachments/`
+
+If you have a subfolder specifically for file sharing:
+
+```bash
+sudo chown -R www-data:www-data /var/www/ppda_laravel_api/public/file_share_attachments
+sudo chmod -R 775 /var/www/ppda_laravel_api/public/file_share_attachments
+```
+
+---
+
+### 💡 Notes:
+
+- `chown` changes the owner to `www-data`, which allows the web server to write to those directories.
+- `chmod 775` gives:
+
+  - Owner (www-data): read, write, execute
+  - Group: read, write, execute
+  - Others: read and execute only
+
 ---
 
 ## Step 7: Configure Nginx for Laravel

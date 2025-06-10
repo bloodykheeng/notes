@@ -81,7 +81,7 @@ sudo apt-get install -y php8.2-xml php8.2-dom php8.2-mysql zip unzip
 or u can use
 
 ```bash
-apt install nginx mysql-server php php-fpm php-mbstring php-xml php-bcmath php-curl zip unzip -y
+apt install nginx mysql-server php php-fpm php-mbstring php-xml php-bcmath php-curl zip unzip php-zip php8.3-gd -y
 ```
 
 -y will answer yes to all

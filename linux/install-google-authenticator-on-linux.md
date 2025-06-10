@@ -91,7 +91,7 @@ KbdInteractiveAuthentication yes
 Apply the changes:
 
 ```sh
-sudo systemctl restart sshd.service
+sudo systemctl restart ssh
 ```
 
 ## Final Step: Logging In with 2FA

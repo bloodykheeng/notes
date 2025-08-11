@@ -1,6 +1,8 @@
+Here’s a **well-organized Markdown guide** for deploying Laravel on Apache, based on your provided resources.
+
 ---
 
-# How to Deploy Laravel on Apache (Ubuntu) By Susan
+# How to Deploy Laravel on Apache (Ubuntu) by susan
 
 ## 📋 Prerequisites
 

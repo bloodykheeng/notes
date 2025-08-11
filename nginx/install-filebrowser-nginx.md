@@ -44,10 +44,18 @@ http://<YOUR_SERVER_IP>:8080
 
 **Default Credentials:**
 
-- Username: `admin`
-- Password: `admin`
+* Username: `admin`
+* Password: `admin`
 
-You can now manage files in `/var/www` through the web interface.
+You can now manage files in `/var/www` through the web interface. Your instance is now up and running. File Browser will automatically bootstrap a database, in which the configuration and the users are stored. You can find the address in which your instance is running, as well as the randomly generated password for the user `admin`, in the console logs.
+
+⚠ **Important:**
+
+* The automatically generated password for the `admin` user is only displayed **once** in the logs the first time you run File Browser.
+* **Currently, this password is stored in the server logs**, so make sure to copy it and store it securely.
+* If you lose it, you will need to manually delete the database and restart File Browser to regenerate credentials.
+
+
 
 ---
 

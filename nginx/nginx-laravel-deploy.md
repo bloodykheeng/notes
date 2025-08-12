@@ -397,6 +397,9 @@ enter mysql
 ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'your_password';
 FLUSH PRIVILEGES;
 ```
+Nb
+https://mharwood.uk/mysql-native-password-not-loaded-on-mysql-8-4/
+start ting with myscrosoft 9.0 its advicsed u use this caching_sha2_password instead of this mysql_native_password
 
 for help
 https://youtu.be/crfAj9yay5w?si=7rqge3yzXdXJBsPK

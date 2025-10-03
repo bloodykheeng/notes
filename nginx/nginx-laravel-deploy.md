@@ -6,6 +6,7 @@ Before we begin, configure the firewall to allow essential services:
 
 ```bash
 sudo ufw app list  # Shows available applications
+sudo ufw allow "Nginx Full" # Gives nginx full access
 sudo ufw allow OpenSSH  # Allow SSH access
 sudo ufw enable  # Enable the firewall
 sudo ufw status  # Check firewall status
@@ -18,7 +19,7 @@ sudo ufw status  # Check firewall status
 First, install the required dependencies:
 
 ```bash
-sudo apt update && sudo apt install -y nginx mysql-server php php-fpm php-mbstring php-xml php-bcmath php-curl zip unzip
+sudo apt update && sudo apt install -y nginx mysql-server php php-fpm php-mbstring php-xml php-bcmath php-curl zip unzip php-gd php-zip
 ```
 
 ### Verify PHP Version

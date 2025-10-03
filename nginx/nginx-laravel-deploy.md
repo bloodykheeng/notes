@@ -171,6 +171,11 @@ chown -R www-data storage
 chown -R www-data bootstrap/cache
 ```
 
+After create the storage symbolic link
+```bash
+php artisan storage:link
+```
+
 #### 🗂 `public/`
 
 This is the web-accessible root. To allow uploads or public file creation:

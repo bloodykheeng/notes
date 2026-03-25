@@ -112,8 +112,12 @@ Run:
 ```bash
 act
 ```
+sometimes u hav to run `docker login`
+`act -l` - lists all available actions
+`act -j <jobname>` - runs a specific job
+`act` -  runs all jobs
 
-If you get image issues:
+If you get image issues try:
 
 ```bash
 act -P ubuntu-latest=nektos/act-environments-ubuntu:18.04

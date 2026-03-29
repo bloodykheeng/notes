@@ -4,7 +4,7 @@
 
 - **Video:** [Supabase Crash Course - PedroTech](https://youtu.be/kyphLGnSz6Q?si=isNFydvwCNGthA_a)
 - **Supabase Site:** [https://supabase.com](https://supabase.com)
-- **Git Repo:** `git remote add origin https://github.com/bloodykheeng/supabase-crash-coarse.git`
+- **Git Repo:** [https://github.com/bloodykheeng/supabase-crash-coarse.git](https://github.com/bloodykheeng/supabase-crash-coarse.git) 
 
 ### What is Supabase?
 

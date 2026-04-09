@@ -115,19 +115,25 @@ so it can dynamically resolve Firebase file paths for both local and cloud build
     },
     "plugins": [
       "expo-router",
-      ["expo-splash-screen", {
-        "image": "./assets/images/splash.png",
-        "imageWidth": 200,
-        "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
-      }],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
       "expo-secure-store",
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
       "@react-native-community/datetimepicker",
-      ["expo-build-properties", {
-        "ios": { "useFrameworks": "static" }
-      }]
+      [
+        "expo-build-properties",
+        {
+          "ios": { "useFrameworks": "static" }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -160,7 +166,8 @@ module.exports = {
     ios: {
       supportsTablet: true,
       googleServicesFile:
-        process.env.GOOGLE_SERVICES_PLIST ?? "./firebase/GoogleService-Info.plist",
+        process.env.GOOGLE_SERVICES_PLIST ??
+        "./firebase/GoogleService-Info.plist",
     },
     android: {
       googleServicesFile:

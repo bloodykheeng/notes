@@ -498,6 +498,7 @@ WSL cannot use them. You must delete and reinstall from inside WSL:
 
 ```bash
 rm -rf node_modules
+rm package-lock.json
 npm install
 ```
 

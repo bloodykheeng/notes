@@ -38,6 +38,46 @@ sudo apt update && sudo apt install pv -y
 mysqldump -u dbuser -p dbname | pv > dbname.sql
 ```
 
+> **Password prompt with pv:** When you run this, the password prompt appears but `pv` immediately starts showing metrics (0.00 B, 0:00:01, etc.) which makes it look like nothing is happening. The terminal is still waiting for your password behind those metrics. Just **paste your password and press Enter** — it will work even though you can't see what you're typing.
+
+### Without pv (no progress bar)
+
+```bash
+mysqldump -u dbuser -p dbname > dbname.sql
+```
+
+### Monitor the export in another terminal
+
+While the dump is running, open a second terminal and watch the file grow:
+
+```bash
+watch -n 2 ls -lh /var/www/niceprodapi/db-extracts/dbname.sql
+```
+
+This refreshes every 2 seconds and shows the file size increasing — a good sign the dump is working.
+
+### Check if mysqldump is still running
+
+```bash
+ps aux | grep mysqldump
+```
+
+Look for a line like:
+
+```
+root  360375  ...  mysqldump -u nice -p prodnhop
+```
+
+That confirms the process is alive and running.
+
+### Kill a stuck or wrong dump
+
+Take the process ID from `ps aux` and kill it:
+
+```bash
+kill 360375
+```
+
 ### Compressed export (recommended for large databases)
 
 ```bash

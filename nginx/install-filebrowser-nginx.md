@@ -35,7 +35,7 @@ filebrowser -p 8080 -a 134.122.27.34 -r /var/www
 - `-r /var/www` defines the root directory for FileBrowser.
 
 Now, open your browser and go to:
-
+ 
 ```
 http://<YOUR_SERVER_IP>:8080
 
@@ -258,6 +258,56 @@ Now you can access FileBrowser securely at:
 
 ```
 https://tonys.surf:8080
+```
+
+---
+
+## Troubleshooting: SSH Disconnected While FileBrowser Was Running
+
+If your SSH session disconnected while FileBrowser was running manually (not as a service), you will get this error when you reconnect and try to start it again:
+
+```
+Error: timeout
+```
+
+This happens because the old FileBrowser process is still alive in the background holding the port or the database lock.
+
+### Fix — Kill the old process first
+
+Find the running FileBrowser process:
+
+```bash
+ps aux | grep filebrowser
+```
+
+Output will look like:
+
+```
+root  363307  0.0  0.6  1249356  25000  pts/3  Sl+  12:18  0:01  filebrowser -p 8080 -a 172.233.58.26 -r /var/www
+root  366139  0.0  0.0  6676     2176   pts/0  S+   13:04  0:00  grep --color=auto filebrowser
+```
+
+Kill the FileBrowser process (use the PID from the first line, ignore the `grep` line):
+
+```bash
+kill -9 363307
+```
+
+Now start FileBrowser again:
+
+```bash
+filebrowser -p 8080 -a YOUR_SERVER_IP -r /var/www
+# or with config file
+filebrowser -c /etc/filebrowser.json
+```
+
+### Avoid this problem — use a systemd service
+
+If FileBrowser is set up as a systemd service (Step 4), this problem never happens. The service survives SSH disconnects and restarts automatically on reboot. Always prefer the service over running it manually.
+
+```bash
+systemctl start filebrowser.service
+systemctl status filebrowser.service
 ```
 
 ---

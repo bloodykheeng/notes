@@ -175,10 +175,78 @@ This will automatically configure SSL for your Next.js app.
 
 ---
 
+## Running Two Next.js Apps on the Same Server
+
+Each app must run on a **different port**. Nginx then proxies each domain/path to its own port.
+
+### Start the second app on a different port with PM2
+
+```bash
+cd /var/www/second_nextjs_app
+
+# Start on port 3001 (first app uses 3000)
+pm2 start npm --name second_nextjs_app -- start -- --port=3001
+pm2 save
+```
+
+### Create a separate Nginx config for the second app
+
+```bash
+sudo nano /etc/nginx/sites-available/second_nextjs_app
+```
+
+```nginx
+server {
+    listen 80;
+    server_name second-app.yourdomain.com;  # different domain or subdomain
+
+    gzip on;
+    gzip_proxied any;
+    gzip_types application/javascript application/x-javascript text/css text/javascript;
+    gzip_comp_level 5;
+    gzip_buffers 16 8k;
+    gzip_min_length 256;
+
+    location /_next/static/ {
+        alias /var/www/second_nextjs_app/.next/static/;
+        expires 365d;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;  # different port from the first app
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Enable and reload:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/second_nextjs_app /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Port summary
+
+| App | PM2 name | Port | Nginx proxy_pass |
+|---|---|---|---|
+| First app | ppda_nextjs_front | 3000 | `http://127.0.0.1:3000` |
+| Second app | second_nextjs_app | 3001 | `http://127.0.0.1:3001` |
+| Third app (if needed) | third_nextjs_app | 3002 | `http://127.0.0.1:3002` |
+
+Each app gets its own port, its own Nginx config file, and its own PM2 process. Just keep incrementing the port for each new app.
+
+---
+
 ## Final Notes
 
 - Your Next.js application should now be running on Nginx and managed by PM2.
-- If deploying multiple Next.js apps, change the `proxy_pass` port in the Nginx configuration and PM2 startup command accordingly.
 - Ensure you monitor memory usage, as Next.js builds can consume significant RAM.
 
 ---

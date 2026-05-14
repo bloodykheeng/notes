@@ -319,46 +319,58 @@ location /phpmyadmin {
 }
 ```
 
-but if u dont have sites default u can use this in ur conf
-/etc/nginx/sites-available/ppda_angular_front
-ie
+If you don't have a `default` site config or want a dedicated file for your Laravel app, create one:
+
+```bash
+sudo nano /etc/nginx/sites-available/your-laravel-app
+```
+
+Add this complete Laravel config with phpMyAdmin included:
 
 ```nginx
-
 server {
     listen 80;
-    server_name 127.0.0.1;  # Change this to your actual domain or IP if needed
+    server_name your-domain.com;  # domain or your server IP
 
-    root /var/www/ppda_angular_front/;
-    index index.html index.php;
+    root /var/www/your-laravel-app/public;
+    index index.php index.html;
 
     location / {
-        try_files $uri /index.html;
+        try_files $uri $uri/ /index.php?$query_string;
     }
 
-    # Pass PHP scripts to FastCGI server
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/run/php/php8.3-fpm.sock; # Ensure PHP-FPM is running
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
     }
 
-    # phpMyAdmin configuration
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
     location /phpmyadmin {
-        root /var/www/html/;
+        root /usr/share/;
         index index.php;
 
         location ~ \.php$ {
             include snippets/fastcgi-php.conf;
-            fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+            fastcgi_pass unix:/run/php/php8.2-fpm.sock;
             fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
             include fastcgi_params;
         }
     }
 }
+```
 
+Enable the site and reload:
 
+```bash
+sudo ln -s /etc/nginx/sites-available/your-laravel-app /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
 Restart Nginx:

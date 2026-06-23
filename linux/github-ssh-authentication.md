@@ -210,7 +210,15 @@ Now `git pull` and `git push` will use your SSH key with no password prompt.
 
 ## Persisting the Key Across Reboots
 
-The SSH agent resets on reboot. To auto-load your key, add this to `~/.bashrc` or `~/.zshrc`:
+> ⚠️ **Only needed if you used a CUSTOM key path** (e.g. `/root/.ssh/github_key`).
+>
+> If you used the **default path** (`/root/.ssh/id_ed25519` — i.e. you just
+> pressed `Enter` during keygen), you can **skip this entire section**. SSH
+> automatically looks for default key names (`id_ed25519`, `id_rsa`, …) in
+> `~/.ssh/` on every connection, including after reboots — there is nothing to
+> persist. Just run `ssh -T git@github.com` (or `git@gitlab.com`) and it works.
+
+The SSH agent resets on reboot. To auto-load your **custom-named** key, add this to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 eval "$(ssh-agent -s)" > /dev/null 2>&1

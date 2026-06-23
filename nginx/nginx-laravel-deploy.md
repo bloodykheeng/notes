@@ -16,10 +16,37 @@ sudo ufw status  # Check firewall status
 
 ## Step 2: Installing Nginx, MySQL, and PHP
 
-First, install the required dependencies:
+> ⚠️ **Do NOT install the bare `php` meta-package on an Nginx server.**
+> On Ubuntu/Debian, `php` depends on `libapache2-mod-php`, which pulls in
+> **Apache** as a dependency. Apache then tries to start on port 80 and
+> collides with Nginx, giving errors like:
+>
+> ```
+> (98)Address already in use: AH00072: could not bind to address 0.0.0.0:80
+> Job for apache2.service failed ...
+> ```
+>
+> Use **`php-cli` + `php-fpm`** instead — Nginx talks to PHP over FPM and
+> never needs `libapache2-mod-php`.
+
+First, install the required dependencies (note `php-cli`, **not** `php`):
 
 ```bash
-sudo apt update && sudo apt install -y nginx mysql-server php php-fpm php-mbstring php-xml php-bcmath php-curl zip unzip php-gd php-zip
+sudo apt update && sudo apt install -y nginx mysql-server php-cli php-fpm php-mbstring php-xml php-bcmath php-curl zip unzip php-gd php-zip
+```
+
+### If Apache got installed by mistake
+
+If you previously ran the install with the bare `php` package and Apache
+sneaked in, stop it grabbing port 80 and remove it:
+
+```bash
+sudo systemctl stop apache2
+sudo systemctl disable apache2
+sudo apt purge -y apache2 apache2-bin apache2-data apache2-utils 'libapache2-mod-php*'
+sudo apt autoremove -y
+sudo systemctl restart nginx
+sudo ss -ltnp | grep ':80'   # confirm nginx (not apache) owns port 80
 ```
 
 ### Verify PHP Version

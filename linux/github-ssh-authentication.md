@@ -69,6 +69,15 @@ Your passphrase is now removed. `git pull` will no longer prompt for it.
 
 ## Step 2 — Copy the Public Key
 
+**If you used the default path** (just pressed `Enter` during keygen):
+
+```bash
+cat /root/.ssh/id_ed25519.pub      # as root
+cat ~/.ssh/id_ed25519.pub          # as a normal user
+```
+
+**If you used a custom path:**
+
 ```bash
 cat /home/youruser/.ssh/github_key.pub
 ```
@@ -115,14 +124,28 @@ You should see a line with your key fingerprint and email.
 
 ## Step 5 — Test the Connection
 
+> ⚠️ **Test against the host where you actually added the key.**
+> GitHub and GitLab are separate services. Adding your key to **GitLab**
+> does nothing for **GitHub**, and vice versa. A common mistake is adding
+> the key on GitLab but running `ssh -T git@github.com`, which gives:
+>
+> ```
+> git@github.com: Permission denied (publickey).
+> ```
+>
+> The key is fine — you just pointed it at the wrong host. Use the matching command:
+
 ```bash
-ssh -T git@github.com
+ssh -T git@github.com     # if you added the key to GitHub
+ssh -T git@gitlab.com     # if you added the key to GitLab
 ```
 
 Expected output:
 
 ```
 Hi youruser! You've successfully authenticated, but GitHub does not provide shell access.
+# or, on GitLab:
+Welcome to GitLab, @youruser!
 ```
 
 ---

@@ -59,6 +59,105 @@ You can now manage files in `/var/www` through the web interface. Your instance 
 
 ---
 
+## When Port 8080 Is Already Taken
+
+8080 is the most contested port on a server. Laravel **Reverb** defaults to it,
+and so do Jenkins, Tomcat and most admin tools. If FileBrowser will not start, or
+starts and the page never loads, work through this in order.
+
+### 1. See what already holds it
+
+```bash
+ss -ltnp | grep :8080
+```
+
+If it names `php`, that is Reverb. Check which apps are running it:
+
+```bash
+sudo supervisorctl status
+sudo ls -la /etc/supervisor/conf.d/
+```
+
+### 2. Pick a different port instead of fighting for 8080
+
+Taking 8080 off a running app means stopping something that is serving users.
+Give FileBrowser its own port:
+
+```bash
+sudo ufw allow 8081/tcp
+sudo ufw status
+filebrowser -p 8081 -a <YOUR_SERVER_IP> -r /var/www
+```
+
+Then browse to `http://<YOUR_SERVER_IP>:8081`.
+
+To remove a port when you are done with it:
+
+```bash
+sudo ufw delete allow 8081/tcp
+```
+
+### 3. Page will not load, even though ufw allows the port
+
+**Do not assume the port is the problem.** Test whether the port is reachable
+from outside the server, from your own machine:
+
+```powershell
+Test-NetConnection 80.85.84.128 -Port 8081     # Windows
+```
+
+```bash
+nc -zv 80.85.84.128 8081                        # macOS / Linux
+```
+
+If that fails while `ss -ltnp` on the server shows FileBrowser listening and
+`ufw status` allows the port, then **something in front of the server is
+blocking it** — a second firewall you did not configure.
+
+### 4. The second firewall
+
+Cloud providers put their own firewall in front of the machine, outside the OS
+entirely, and `ufw` knows nothing about it:
+
+| Provider | Where |
+|---|---|
+| Linode | Cloud Firewall → your firewall → Add Inbound Rule |
+| DigitalOcean | Networking → Firewalls |
+| AWS | Security Groups |
+| Azure | Network Security Group |
+
+Add a **custom inbound TCP rule** for the port there as well. A port is only open
+when **both** firewalls allow it.
+
+> **What this cost me once.** FileBrowser would not load on 8081 and I assumed the
+> port was at fault, so I stopped every Reverb app on the box trying to free 8080.
+> Neither port was the problem: `ufw` allowed them and the **Linode** Cloud
+> Firewall did not. The tell is that stopping apps changed nothing — when a port
+> is genuinely in use you get an *address already in use* error, not a page that
+> silently never loads.
+
+### 5. If you must stop Reverb to reuse 8080
+
+```bash
+sudo supervisorctl stop alphapi.nwtdemos.com-reverb:*
+sudo supervisorctl stop sdsbetapi.nwtdemos.com-reverb:*
+ss -ltnp | grep :8080          # confirm nothing is left
+```
+
+Killing the process by PID does **not** work — Supervisor has `autorestart=true`
+and puts it straight back. Use `supervisorctl stop`.
+
+Start them again afterwards, and do not forget to, because a program left in
+`STOPPED` stays down and does not come back on reboot:
+
+```bash
+sudo supervisorctl start alphapi.nwtdemos.com-reverb:*
+sudo supervisorctl start sdsbetapi.nwtdemos.com-reverb:*
+sudo supervisorctl status
+```
+
+---
+
 ## Step 2: Persistent FileBrowser Setup
 
 To ensure FileBrowser starts on boot, create a configuration file:
@@ -111,6 +210,10 @@ sudo ufw allow 8080/tcp
 sudo ufw reload
 sudo ufw status
 ```
+
+> `ufw` is only the firewall **on** the machine. If the port still cannot be
+> reached from outside, your cloud provider has a second one in front of it —
+> see [When Port 8080 Is Already Taken](#when-port-8080-is-already-taken).
 
 ---
 

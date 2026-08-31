@@ -117,17 +117,60 @@ blocking it** — a second firewall you did not configure.
 ### 4. The second firewall
 
 Cloud providers put their own firewall in front of the machine, outside the OS
-entirely, and `ufw` knows nothing about it:
+entirely, and `ufw` knows nothing about it. A port is only open when **both**
+firewalls allow it.
+
+#### Linode (Akamai)
+
+`cloud.linode.com` → **Firewalls** → your firewall (e.g. `alpha-firewall`) →
+**Rules** tab → **Inbound Rules** → **Add an Inbound Rule**.
+
+Fill it in exactly like this:
+
+| Field | Value |
+|---|---|
+| Preset | leave on `Select a rule preset...` — there is no preset for 8080 |
+| Label | `accept-inbound-HTTP-8080` (letters, numbers and dashes only) |
+| Description | optional |
+| Protocol | `TCP` |
+| Ports | `Custom` |
+| Custom Port Range | `8080` |
+| Sources | `All IPv4, All IPv6` |
+| Action | `Accept` |
+
+**Add Changes**, then **Save Changes** on the Rules page — the drawer only stages
+the rule, and closing the page without saving loses it.
+
+A working set of inbound rules ends up looking like:
+
+```
+accept-inbound-ssh         Accept  TCP   22     All IPv4, All IPv6
+accept-inbound-icmp        Accept  ICMP  -      All IPv4, All IPv6
+accept-inbound-HTTP        Accept  TCP   80     All IPv4, All IPv6
+accept-inbound-HTTPS       Accept  TCP   443    All IPv4, All IPv6
+accept-inbound-HTTP-8080   Accept  TCP   8080   All IPv4, All IPv6
+```
+
+Two things that catch people out:
+
+- **The firewall must be attached to the machine.** Check the **Linodes** tab on
+  the firewall — if your server is not listed there, the rules apply to nothing.
+- **The default inbound policy is Drop**, so anything without an explicit Accept
+  rule is blocked. That is why 22, 80 and 443 each need a rule of their own, and
+  why a new port needs one too.
+
+> Using a port other than 8080, say 8081? Make the rule say `8081` in both the
+> label and the port range. I once added the rule for **8080** while FileBrowser
+> was running on **8081**, and of course nothing changed.
+
+#### Other providers
 
 | Provider | Where |
 |---|---|
-| Linode | Cloud Firewall → your firewall → Add Inbound Rule |
-| DigitalOcean | Networking → Firewalls |
-| AWS | Security Groups |
-| Azure | Network Security Group |
-
-Add a **custom inbound TCP rule** for the port there as well. A port is only open
-when **both** firewalls allow it.
+| DigitalOcean | Networking → Firewalls → Inbound Rules |
+| AWS | EC2 → Security Groups → Inbound rules |
+| Azure | Network Security Group → Inbound security rules |
+| Google Cloud | VPC network → Firewall → Create firewall rule |
 
 > **What this cost me once.** FileBrowser would not load on 8081 and I assumed the
 > port was at fault, so I stopped every Reverb app on the box trying to free 8080.

@@ -106,6 +106,12 @@ sudo apt-get update
 sudo apt-get install -y php8.2-xml php8.2-dom php8.2-mysql zip unzip
 ```
 
+> **Ubuntu 26.04 Resolute and newer:** the `ondrej/php` PPA no longer publishes for new
+> releases (`apt update` 404s on its Release file). Use `packages.sury.org` instead, and
+> install the exact PHP version the project was developed on (Resolute ships 8.5, which
+> breaks a lock file built on 8.4). Full steps in
+> [upgrade-php-version-nginx.md](upgrade-php-version-nginx.md), Step 2.
+
 or u can use
 
 ```bash

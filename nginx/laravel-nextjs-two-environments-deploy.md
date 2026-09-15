@@ -166,7 +166,8 @@ cp .env.example .env
 nano .env
 ```
 
-Values to set (everything else per the project's `docs/environment-setup.md`):
+Values to set. Mail, Firebase, Google sign-in and reCAPTCHA values: see
+[../integrations/google-workspace-mail-firebase-oauth-recaptcha.md](../integrations/google-workspace-mail-firebase-oauth-recaptcha.md).
 
 ```env
 APP_ENV=production
@@ -229,7 +230,9 @@ sudo chmod -R 775 /var/www/testapi.example.com/storage \
 ## 7. Next.js: env, build, pm2
 
 Next.js reads **`.env.production`** at `npm run build` on every server, so on the test
-server that file holds the **test** values. Do this per frontend folder.
+server that file holds the **test** values. Do this per frontend folder. Firebase / Google
+sign-in / reCAPTCHA keys and the service-worker pattern: see
+[../nextjs/firebase-messaging-sw-and-nextauth-google.md](../nextjs/firebase-messaging-sw-and-nextauth-google.md).
 
 ```bash
 cd /var/www/test.example.com

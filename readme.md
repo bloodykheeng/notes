@@ -27,6 +27,16 @@ Every note is written to be followed top to bottom and copy-pasted.
 | [install-filebrowser-nginx.md](nginx/install-filebrowser-nginx.md) | File Browser behind Nginx |
 | [postgres-pgvector-laravel-deploy.md](nginx/postgres-pgvector-laravel-deploy.md) | Postgres + pgvector for Laravel |
 
+### integrations
+| Note | What it covers |
+| --- | --- |
+| [google-workspace-mail-firebase-oauth-recaptcha.md](integrations/google-workspace-mail-firebase-oauth-recaptcha.md) | Where every Google-side env value comes from: Workspace SMTP + App Password, Firebase config and service account, OAuth client, reCAPTCHA, and the walls (2SV, org policy, project quota) |
+
+### nextjs
+| Note | What it covers |
+| --- | --- |
+| [firebase-messaging-sw-and-nextauth-google.md](nextjs/firebase-messaging-sw-and-nextauth-google.md) | One Firebase service worker for every environment (config via query string) and Sign in with Google with NextAuth v4 |
+
 ### linux
 | Note | What it covers |
 | --- | --- |

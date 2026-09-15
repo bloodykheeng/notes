@@ -146,8 +146,8 @@ second one shows `FATAL Exited too quickly` / `ERROR (spawn error)`.
 
 | App | `REVERB_SERVER_PORT` | Supervisor `--port` | Nginx `proxy_pass` | Public |
 | --- | --- | --- | --- | --- |
-| testinvestapi.alphaeastafrica.com | 8080 | 8080 | `http://127.0.0.1:8080` | `wss://testinvestapi.alphaeastafrica.com` 443 |
-| investapi.alphaeastafrica.com | 8081 | 8081 | `http://127.0.0.1:8081` | `wss://investapi.alphaeastafrica.com` 443 |
+| testapi.example.com | 8080 | 8080 | `http://127.0.0.1:8080` | `wss://testapi.example.com` 443 |
+| api.example.com | 8081 | 8081 | `http://127.0.0.1:8081` | `wss://api.example.com` 443 |
 
 Three places must agree per app: the `.env`, the Supervisor command, the Nginx
 `proxy_pass`. The public side (`REVERB_HOST`, 443, https) is the same for all.

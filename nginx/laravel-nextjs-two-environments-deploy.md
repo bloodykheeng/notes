@@ -2,18 +2,18 @@
 
 Copy-paste order for a fresh Ubuntu box hosting **two environments** of a Laravel API
 (queue workers, scheduler, Reverb WebSockets) and a Next.js frontend (pm2), behind Nginx
-with Let's Encrypt. Written from the Alpha Fund deploy (Hostinger VPS, Ubuntu 26.04, Sep 2026).
+with Let's Encrypt. Verified on Ubuntu 26.04 (Sep 2026).
 
 Replace the domains and folders once at the top and keep them consistent everywhere:
 
 | | Production | Test |
 | --- | --- | --- |
-| Frontend | `invest.alphaeastafrica.com` | `testinvest.alphaeastafrica.com` |
-| API | `investapi.alphaeastafrica.com` | `testinvestapi.alphaeastafrica.com` |
+| Frontend | `app.example.com` | `test.example.com` |
+| API | `api.example.com` | `testapi.example.com` |
 | Folder | `/var/www/<domain>` | `/var/www/<domain>` |
 | Next.js port (pm2) | `3001` | `3000` |
 | Reverb port (internal) | `8081` | `8080` |
-| MySQL db / user | `alpha_fund` / `alpha` | `alpha_fund_test` / `alpha_test` |
+| MySQL db / user | `myapp` / `myapp_user` | `myapp_test` / `myapp_test_user` |
 | PHP-FPM socket | `/run/php/php8.4-fpm.sock` | same |
 
 Rules that avoid every problem met so far:
@@ -33,7 +33,7 @@ Rules that avoid every problem met so far:
 your machine before touching the server:
 
 ```bash
-nslookup investapi.alphaeastafrica.com 8.8.8.8
+nslookup api.example.com 8.8.8.8
 ```
 
 ---
@@ -82,20 +82,32 @@ If the OS shipped a different PHP (26.04 ships 8.5), stop its FPM so nothing pic
 sudo systemctl disable --now php8.5-fpm
 ```
 
-### Composer, Node, pm2
+### Composer
 
 ```bash
 curl -sS https://getcomposer.org/installer | php && sudo mv composer.phar /usr/local/bin/composer
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs
-sudo npm install -g pm2
 ```
+
+### Node via nvm, then pm2
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+exec $SHELL
+nvm install --lts
+nvm alias default node
+node -v && npm -v
+npm install -g pm2
+```
+
+nvm installs Node for the user running the commands; run `pm2 startup` later as that same
+user so the generated service points at nvm's Node.
 
 ---
 
 ## 3. Git access (deploy key)
 
 ```bash
-ssh-keygen -t ed25519 -C "alpha server" -f ~/.ssh/id_ed25519 -N ""
+ssh-keygen -t ed25519 -C "deploy server" -f ~/.ssh/id_ed25519 -N ""
 cat ~/.ssh/id_ed25519.pub
 ```
 
@@ -112,10 +124,10 @@ ssh -T git@gitlab.com
 
 ```bash
 cd /var/www
-git clone -b farouk git@gitlab.com:dbuwembo/fundapi.git   investapi.alphaeastafrica.com
-git clone -b farouk git@gitlab.com:dbuwembo/fundapi.git   testinvestapi.alphaeastafrica.com
-git clone -b farouk git@gitlab.com:dbuwembo/funddash.git  invest.alphaeastafrica.com
-git clone -b farouk git@gitlab.com:dbuwembo/funddash.git  testinvest.alphaeastafrica.com
+git clone -b <branch> git@gitlab.com:<group>/<api-repo>.git   api.example.com
+git clone -b <branch> git@gitlab.com:<group>/<api-repo>.git   testapi.example.com
+git clone -b <branch> git@gitlab.com:<group>/<frontend-repo>.git  app.example.com
+git clone -b <branch> git@gitlab.com:<group>/<frontend-repo>.git  test.example.com
 ```
 
 ---
@@ -127,14 +139,14 @@ sudo mysql
 ```
 
 ```sql
-CREATE DATABASE alpha_fund      CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE alpha_fund_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE myapp      CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE myapp_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE USER 'alpha'@'localhost'      IDENTIFIED BY 'PROD_PASSWORD';
-CREATE USER 'alpha_test'@'localhost' IDENTIFIED BY 'TEST_PASSWORD';
+CREATE USER 'myapp_user'@'localhost'      IDENTIFIED BY 'PROD_PASSWORD';
+CREATE USER 'myapp_test_user'@'localhost' IDENTIFIED BY 'TEST_PASSWORD';
 
-GRANT ALL PRIVILEGES ON alpha_fund.*      TO 'alpha'@'localhost';
-GRANT ALL PRIVILEGES ON alpha_fund_test.* TO 'alpha_test'@'localhost';
+GRANT ALL PRIVILEGES ON myapp.*      TO 'myapp_user'@'localhost';
+GRANT ALL PRIVILEGES ON myapp_test.* TO 'myapp_test_user'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
@@ -146,10 +158,10 @@ Never point the app at `root`: Ubuntu's MySQL root uses `auth_socket`, so Larave
 
 ## 6. Laravel: env, generated values, install
 
-Do this once per API folder (`investapi...` with prod values, `testinvestapi...` with test values).
+Do this once per API folder (`api.example.com` with prod values, `testapi.example.com` with test values).
 
 ```bash
-cd /var/www/testinvestapi.alphaeastafrica.com
+cd /var/www/testapi.example.com
 cp .env.example .env
 nano .env
 ```
@@ -159,11 +171,11 @@ Values to set (everything else per the project's `docs/environment-setup.md`):
 ```env
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://testinvestapi.alphaeastafrica.com
-FRONTEND_URL=https://testinvest.alphaeastafrica.com
+APP_URL=https://testapi.example.com
+FRONTEND_URL=https://test.example.com
 
-DB_DATABASE=alpha_fund_test
-DB_USERNAME=alpha_test
+DB_DATABASE=myapp_test
+DB_USERNAME=myapp_test_user
 DB_PASSWORD=TEST_PASSWORD
 
 QUEUE_CONNECTION=database
@@ -182,7 +194,7 @@ echo "REVERB_APP_SECRET=$(openssl rand -hex 10)"
 REVERB_APP_ID=<generated>
 REVERB_APP_KEY=<generated>
 REVERB_APP_SECRET=<generated>
-REVERB_HOST="testinvestapi.alphaeastafrica.com"   # public: what browsers connect to
+REVERB_HOST="testapi.example.com"   # public: what browsers connect to
 REVERB_PORT=443
 REVERB_SCHEME=https
 REVERB_SERVER_HOST=0.0.0.0                        # internal: where the process listens
@@ -202,10 +214,10 @@ php artisan config:cache && php artisan route:cache && php artisan view:cache
 Ownership (once, and again after any root-run command touched these folders):
 
 ```bash
-sudo chown -R www-data:www-data /var/www/testinvestapi.alphaeastafrica.com/storage \
-  /var/www/testinvestapi.alphaeastafrica.com/bootstrap/cache
-sudo chmod -R 775 /var/www/testinvestapi.alphaeastafrica.com/storage \
-  /var/www/testinvestapi.alphaeastafrica.com/bootstrap/cache
+sudo chown -R www-data:www-data /var/www/testapi.example.com/storage \
+  /var/www/testapi.example.com/bootstrap/cache
+sudo chmod -R 775 /var/www/testapi.example.com/storage \
+  /var/www/testapi.example.com/bootstrap/cache
 ```
 
 > `config:cache` is safe only if no app code calls `env()` directly (it returns `null`
@@ -220,20 +232,20 @@ Next.js reads **`.env.production`** at `npm run build` on every server, so on th
 server that file holds the **test** values. Do this per frontend folder.
 
 ```bash
-cd /var/www/testinvest.alphaeastafrica.com
+cd /var/www/test.example.com
 nano .env.production
 ```
 
 ```env
-NEXT_PUBLIC_BASE_URL=https://testinvestapi.alphaeastafrica.com
-NEXT_PUBLIC_API_BASE_URL=https://testinvestapi.alphaeastafrica.com/api
-NEXTAUTH_URL=https://testinvest.alphaeastafrica.com
+NEXT_PUBLIC_BASE_URL=https://testapi.example.com
+NEXT_PUBLIC_API_BASE_URL=https://testapi.example.com/api
+NEXTAUTH_URL=https://test.example.com
 NEXTAUTH_SECRET=<npx auth secret>
 
 NEXT_PUBLIC_REVERB_APP_ID=<same as the API .env>
 NEXT_PUBLIC_REVERB_APP_KEY=<same as the API .env>
 NEXT_PUBLIC_REVERB_APP_SECRET=<same as the API .env>
-NEXT_PUBLIC_REVERB_HOST="testinvestapi.alphaeastafrica.com"
+NEXT_PUBLIC_REVERB_HOST="testapi.example.com"
 NEXT_PUBLIC_REVERB_PORT=443
 NEXT_PUBLIC_REVERB_SCHEME=https
 ```
@@ -241,15 +253,15 @@ NEXT_PUBLIC_REVERB_SCHEME=https
 ```bash
 npm ci
 npm run build
-pm2 start npm --name alpha_test -- start                 # port 3000
+pm2 start npm --name app_test -- start                 # port 3000
 ```
 
 Prod, on a different port:
 
 ```bash
-cd /var/www/invest.alphaeastafrica.com
+cd /var/www/app.example.com
 npm ci && npm run build
-pm2 start npm --name alpha_prod -- start -- --port=3001  # port 3001
+pm2 start npm --name app_prod -- start -- --port=3001  # port 3001
 ```
 
 Survive reboots:
@@ -265,13 +277,13 @@ pm2 startup   # run the command it prints
 
 ### API server block (per environment)
 
-`sudo nano /etc/nginx/sites-available/testinvestapi.alphaeastafrica.com`
+`sudo nano /etc/nginx/sites-available/testapi.example.com`
 
 ```nginx
 server {
-    server_name testinvestapi.alphaeastafrica.com www.testinvestapi.alphaeastafrica.com;
+    server_name testapi.example.com www.testapi.example.com;
 
-    root /var/www/testinvestapi.alphaeastafrica.com/public;
+    root /var/www/testapi.example.com/public;
     index index.php index.html;
     client_max_body_size 50M;
 
@@ -309,11 +321,11 @@ server {
 
 ### Frontend server block (per environment)
 
-`sudo nano /etc/nginx/sites-available/testinvest.alphaeastafrica.com`
+`sudo nano /etc/nginx/sites-available/test.example.com`
 
 ```nginx
 server {
-    server_name testinvest.alphaeastafrica.com www.testinvest.alphaeastafrica.com;
+    server_name test.example.com www.test.example.com;
 
     gzip on;
     gzip_proxied any;
@@ -323,7 +335,7 @@ server {
     gzip_min_length 256;
 
     location /_next/static/ {
-        alias /var/www/testinvest.alphaeastafrica.com/.next/static/;
+        alias /var/www/test.example.com/.next/static/;
         expires 365d;
         access_log off;
     }
@@ -343,10 +355,10 @@ server {
 Enable all four and reload:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/investapi.alphaeastafrica.com     /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/testinvestapi.alphaeastafrica.com /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/invest.alphaeastafrica.com        /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/testinvest.alphaeastafrica.com    /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/api.example.com     /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/testapi.example.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/app.example.com        /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/test.example.com    /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -356,10 +368,10 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ```bash
 sudo certbot --nginx \
-  -d invest.alphaeastafrica.com -d www.invest.alphaeastafrica.com \
-  -d investapi.alphaeastafrica.com -d www.investapi.alphaeastafrica.com \
-  -d testinvest.alphaeastafrica.com -d www.testinvest.alphaeastafrica.com \
-  -d testinvestapi.alphaeastafrica.com -d www.testinvestapi.alphaeastafrica.com
+  -d app.example.com -d www.app.example.com \
+  -d api.example.com -d www.api.example.com \
+  -d test.example.com -d www.test.example.com \
+  -d testapi.example.com -d www.testapi.example.com
 ```
 
 Certbot edits the server blocks (443 + redirect). Renewal is automatic:
@@ -369,37 +381,37 @@ Certbot edits the server blocks (443 + redirect). Renewal is automatic:
 
 ## 10. Supervisor: queue workers + Reverb (one file per process)
 
-`sudo nano /etc/supervisor/conf.d/testinvestapi.alphaeastafrica.com-worker.conf`
+`sudo nano /etc/supervisor/conf.d/testapi.example.com-worker.conf`
 
 ```ini
-[program:testinvestapi.alphaeastafrica.com-worker]
+[program:testapi.example.com-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/testinvestapi.alphaeastafrica.com/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+command=php /var/www/testapi.example.com/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
 autostart=true
 autorestart=true
 user=www-data
 numprocs=8
 redirect_stderr=true
-stdout_logfile=/var/www/testinvestapi.alphaeastafrica.com/storage/logs/worker.log
+stdout_logfile=/var/www/testapi.example.com/storage/logs/worker.log
 stopwaitsecs=3600
 ```
 
-`sudo nano /etc/supervisor/conf.d/testinvestapi.alphaeastafrica.com-reverb.conf`
+`sudo nano /etc/supervisor/conf.d/testapi.example.com-reverb.conf`
 
 ```ini
-[program:testinvestapi.alphaeastafrica.com-reverb]
+[program:testapi.example.com-reverb]
 process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/testinvestapi.alphaeastafrica.com/artisan reverb:start --host=0.0.0.0 --port=8080
+command=php /var/www/testapi.example.com/artisan reverb:start --host=0.0.0.0 --port=8080
 autostart=true
 autorestart=true
 user=www-data
 numprocs=1
 redirect_stderr=true
-stdout_logfile=/var/www/testinvestapi.alphaeastafrica.com/storage/logs/reverb.log
+stdout_logfile=/var/www/testapi.example.com/storage/logs/reverb.log
 stopwaitsecs=3600
 ```
 
-Same two files for `investapi.alphaeastafrica.com` with `--port=8081`. Then:
+Same two files for `api.example.com` with `--port=8081`. Then:
 
 ```bash
 sudo supervisorctl reread
@@ -411,8 +423,8 @@ Manage:
 
 ```bash
 sudo supervisorctl restart all
-sudo supervisorctl restart testinvestapi.alphaeastafrica.com-worker:*
-sudo supervisorctl restart investapi.alphaeastafrica.com-reverb:*
+sudo supervisorctl restart testapi.example.com-worker:*
+sudo supervisorctl restart api.example.com-reverb:*
 ```
 
 ---
@@ -424,8 +436,8 @@ sudo crontab -u www-data -e
 ```
 
 ```cron
-* * * * * cd /var/www/investapi.alphaeastafrica.com && php artisan schedule:run >> /dev/null 2>&1
-* * * * * cd /var/www/testinvestapi.alphaeastafrica.com && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/api.example.com && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/testapi.example.com && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 Make sure the same lines are **not** in `crontab -e` (root) or `sudo crontab -e`.
@@ -436,13 +448,13 @@ Make sure the same lines are **not** in `crontab -e` (root) or `sudo crontab -e`
 
 ```bash
 sudo supervisorctl status                       # all RUNNING
-pm2 status                                      # alpha_prod + alpha_test online
+pm2 status                                      # app_prod + app_test online
 sudo ss -ltnp | grep -E ':(3000|3001|8080|8081)' # four listeners
-curl -I https://testinvestapi.alphaeastafrica.com/api/v1/health 2>/dev/null | head -1
+curl -I https://testapi.example.com/api/v1/health 2>/dev/null | head -1
 ```
 
 Browser: open the frontend, log in, DevTools > Network > WS shows
-`wss://testinvestapi.alphaeastafrica.com/app/<key>` with status 101.
+`wss://testapi.example.com/app/<key>` with status 101.
 
 ---
 
@@ -451,13 +463,13 @@ Browser: open the frontend, log in, DevTools > Network > WS shows
 API:
 
 ```bash
-cd /var/www/testinvestapi.alphaeastafrica.com
+cd /var/www/testapi.example.com
 git pull
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 sudo chown -R www-data:www-data storage bootstrap/cache
-sudo supervisorctl restart testinvestapi.alphaeastafrica.com-worker:* testinvestapi.alphaeastafrica.com-reverb:*
+sudo supervisorctl restart testapi.example.com-worker:* testapi.example.com-reverb:*
 ```
 
 The worker restart is not optional: a queue worker keeps the old code in memory until
@@ -466,10 +478,10 @@ restarted, which is the most common "my change is not working" on this stack.
 Frontend:
 
 ```bash
-cd /var/www/testinvest.alphaeastafrica.com
+cd /var/www/test.example.com
 git pull
 npm ci && npm run build
-pm2 restart alpha_test
+pm2 restart app_test
 ```
 
 ---

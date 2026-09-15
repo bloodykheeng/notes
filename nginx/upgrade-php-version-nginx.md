@@ -11,7 +11,7 @@ spatie/laravel-model-states 2.14 requires php ^8.4 -> your php version (8.3.6) d
 ```
 
 - Ubuntu 26.04 "Resolute" ships **PHP 8.5**, which is too NEW for a lock file built on 8.4
-  (seen on the Alpha Fund VPS, Sep 2026):
+  (seen Sep 2026):
 
 ```
 phpoffice/phpspreadsheet 1.30.4 requires php >=7.4.0 <8.5.0 -> your php version (8.5.4) does not satisfy that requirement.

@@ -438,6 +438,34 @@ Apply those privileges:
 FLUSH PRIVILEGES;
 ```
 
+### 🔒 Grant Privileges on ONE Database Only (preferred for apps)
+
+`*.*` gives the user every database on the server. When one MySQL hosts several apps or
+environments (prod + test), give each app its own user that can only reach its own
+database. A leak or bug in test then cannot touch prod data.
+
+```sql
+CREATE DATABASE myapp      CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE myapp_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE USER 'myapp_user'@'localhost'      IDENTIFIED BY 'PROD_PASSWORD';
+CREATE USER 'myapp_test_user'@'localhost' IDENTIFIED BY 'TEST_PASSWORD';
+
+GRANT ALL PRIVILEGES ON myapp.*      TO 'myapp_user'@'localhost';
+GRANT ALL PRIVILEGES ON myapp_test.* TO 'myapp_test_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+`DB_USERNAME` / `DB_PASSWORD` in each app's `.env` then use its own user. Never point an
+app at `root`: on Ubuntu, MySQL root uses `auth_socket`, so Laravel over TCP gets
+`SQLSTATE[HY000] [1698] Access denied for user 'root'@'localhost'`.
+
+Check what a user can see:
+
+```sql
+SHOW GRANTS FOR 'myapp_test_user'@'localhost';
+```
+
 ---
 
 this step is not required

@@ -137,6 +137,13 @@ sudo supervisorctl status
 Name the file and the program after the domain, so a second app on the box does not
 collide in `supervisorctl status`.
 
+The program runs as `www-data`, so its log file must be writable by `www-data`. If you ever run
+artisan as root in this folder, re-fix it, otherwise Reverb logs nothing:
+
+```bash
+chown -R www-data storage
+```
+
 ---
 
 ## 6. Two or more apps on one box
@@ -205,6 +212,8 @@ Reverb switches to `uv` automatically when the extension is present.
 | `502 Bad Gateway` on `/app` | Reverb not running: `sudo supervisorctl status`. |
 | Events broadcast, client gets nothing | `BROADCAST_CONNECTION` not `reverb`, or the queue worker is down or stale. |
 | Killed the process, it came back | `autorestart=true`. Use `supervisorctl stop <program>:*`. |
+| `Failed to create broadcaster for connection "reverb": Pusher::__construct(): Argument #1 ($auth_key) must be of type string, null given` | The app is reading a **cached config** built before `REVERB_APP_KEY` existed. `php artisan config:show broadcasting.connections.reverb` shows the truth; fix with `config:clear && config:cache`, then restart the workers (they hold the old config in memory). |
+| Reverb writes nothing to `storage/logs/reverb.log` | The log file is root-owned while Reverb runs as `www-data`. `chown -R www-data storage`. See [laravel-production-cache-permission-error-fix.md](laravel-production-cache-permission-error-fix.md). |
 
 ---
 

@@ -1,4 +1,17 @@
-# Fixing Laravel `file_put_contents(...storage/framework/cache...)` Error (Production Server)
+# Laravel storage-permission failures on a production server (root vs www-data)
+
+Two symptoms, one root cause: something ran as **root** and left files under `storage/` that
+**www-data** can no longer write.
+
+| Symptom | Where it shows |
+| --- | --- |
+| `file_put_contents(.../storage/framework/cache/...): Failed to open stream` | in the response / log |
+| **Bare HTTP 500, empty response body, nothing written to `laravel.log`** | only in the nginx access log |
+
+The second one is the nastier of the two and is covered in
+[Silent 500 with an empty log](#silent-500-with-an-empty-log) below.
+
+---
 
 ## Problem
 
@@ -217,6 +230,95 @@ Expected:
 ```
 www-data www-data
 ```
+
+---
+
+## Silent 500 with an empty log
+
+### Symptom
+
+A write endpoint (an approval, a form submit) returns **500** in about a second. The browser
+shows only a generic network/CORS failure because the response body is empty, and
+`storage/logs/laravel.log` has **no entry for it at all**: its newest lines are days old,
+from the last commands you ran by hand.
+
+### Cause
+
+`laravel.log` is owned by root:
+
+```bash
+ls -la storage/logs/
+-rw-r--r--  1 root     root  23772 Sep 15 13:11 laravel.log
+-rw-r--r--  1 www-data root     14 Sep 14 18:15 .gitignore
+```
+
+The file was created (or last written) by an artisan command run as **root**, typically
+`php artisan migrate` during deployment. PHP-FPM runs as **www-data**, which now has read-only
+access. The moment a request writes any log line, Monolog throws
+`failed to open stream: Permission denied` **inside the exception handler**, so Laravel cannot
+render an error page and cannot record what happened. You get a naked 500.
+
+GET endpoints keep working (they log nothing), which makes it look like a bug in one feature.
+
+### Diagnosis
+
+```bash
+cd /var/www/<your-app>
+
+# 1. Is there any entry at all for the failing request's timestamp?
+grep -a "production.ERROR" storage/logs/*.log | tail -5 | cut -c1-500
+
+# 2. What status did the request actually get, and did it reach PHP?
+sudo grep -a "<the endpoint path>" /var/log/nginx/access.log | tail -10
+
+# 3. Who owns the log, and can the web user write it?
+ls -la storage/logs/
+sudo -u www-data touch storage/logs/laravel.log && echo "www-data CAN write" || echo "www-data CANNOT write"
+
+# 4. Rule out the queue as the source
+php artisan queue:failed | tail -20
+```
+
+A `500` in the access log plus **no** matching line in `laravel.log` is the signature. (A `504`
+or `499` there would mean a timeout instead, a different problem.)
+
+### Fix
+
+```bash
+chown -R www-data storage
+chown -R www-data bootstrap/cache
+ls -la storage/logs/          # confirm both .log files now show www-data
+```
+
+Retry the request; it succeeds, and any genuine error is now recorded properly.
+
+### Prevention
+
+Run artisan as the web user so ownership never flips back:
+
+```bash
+sudo -u www-data php artisan migrate --force
+sudo -u www-data php artisan config:cache
+sudo -u www-data php artisan optimize
+```
+
+The Laravel deployment docs only require that "the web server process owner has permission to
+write to `bootstrap/cache` and `storage`", and they do not say which user runs artisan, which is
+exactly why this keeps happening. Laravel Forge avoids it by running PHP-FPM, the queue workers
+and the deploys all as the **same** non-root user.
+
+If you prefer to keep working as root, make the directories self-correcting instead:
+
+```bash
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R ug+rwX storage bootstrap/cache
+find storage bootstrap/cache -type d -exec chmod g+s {} \;   # new files inherit the group
+setfacl -R -d -m g:www-data:rwx storage bootstrap/cache       # default ACL for new files
+```
+
+> Do not forget the other long-running services: `storage/logs/reverb.log` and the worker log
+> are written by www-data too, so a root-owned copy of either silences that service's logging
+> in the same way.
 
 ---
 

@@ -204,10 +204,44 @@ chown -R www-data storage
 chown -R www-data bootstrap/cache
 ```
 
+> **Then keep it that way: run artisan as the web user, not as root.**
+> The Laravel docs require only that "the web server process owner has permission to write
+> to these directories". The trap is that whoever runs an artisan command **creates** files
+> there, and root creates them `root:root 644`, which silently removes write access from
+> `www-data` again. One `php artisan migrate` as root is enough to break the app hours later.
+>
+> ```bash
+> sudo -u www-data php artisan migrate --force
+> sudo -u www-data php artisan optimize
+> ```
+>
+> Symptom when you forget: every write request returns a bare **500 with an empty body and
+> nothing in the log**, because Laravel fails while trying to log the exception. See
+> [laravel-production-cache-permission-error-fix.md](laravel-production-cache-permission-error-fix.md).
+
 After create the storage symbolic link
 ```bash
-php artisan storage:link
+sudo -u www-data php artisan storage:link
 ```
+
+### Deployment optimisation commands
+
+The documented deploy sequence (`php artisan optimize` caches config, events, routes and views
+in one command):
+
+```bash
+sudo -u www-data php artisan migrate --force
+sudo -u www-data php artisan optimize          # optimize:clear reverses it
+sudo -u www-data php artisan reload            # restarts queue workers / Reverb on new code
+```
+
+Two rules that come with `config:cache`:
+
+- **Only call `env()` inside `config/*.php`.** Once the config is cached the `.env` file is not
+  loaded at all, and `env()` in app code returns `null`. Check with `grep -rn "env('" app routes`.
+- **Re-run it after EVERY `.env` edit**, and make it the last step of the deploy. A value added
+  to `.env` after the cache was built is invisible to the app until you rebuild the cache
+  (`php artisan config:show <key>` tells you what the app actually loaded).
 
 #### 🗂 `public/`
 

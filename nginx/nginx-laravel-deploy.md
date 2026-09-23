@@ -204,6 +204,25 @@ chown -R www-data storage
 chown -R www-data bootstrap/cache
 ```
 
+Verify it took, every file has to belong to `www-data`, not just the folders:
+
+```bash
+ls -la storage/logs/
+```
+
+```
+-rw-r--r--  1 www-data root  23772 Sep 15 13:11 laravel.log   <- correct
+-rw-r--r--  1 root     root  23772 Sep 15 13:11 laravel.log   <- broken, the app cannot log
+```
+
+This one listing is the fastest check there is: the log files are what root-run artisan
+commands take ownership of first, so if they show `www-data` the rest almost certainly does
+too. Confirm the web user can actually write:
+
+```bash
+sudo -u www-data touch storage/logs/laravel.log && echo "www-data CAN write" || echo "www-data CANNOT write"
+```
+
 > **Then keep it that way: run artisan as the web user, not as root.**
 > The Laravel docs require only that "the web server process owner has permission to write
 > to these directories". The trap is that whoever runs an artisan command **creates** files

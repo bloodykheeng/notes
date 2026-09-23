@@ -54,6 +54,13 @@ Every note is written to be followed top to bottom and copy-pasted.
 | [increase-php-upload-limit-apache.md](apache/increase-php-upload-limit-apache.md) | Upload limits |
 | [create-multiple-ips-aws.md](apache/create-multiple-ips-aws.md) | Multiple IPs on AWS |
 
+### clodex
+| Note | What it covers |
+| --- | --- |
+| [README.md](clodex/README.md) | How clodex, the VS Code launcher and the proxy server fit together |
+| [update-procedure.md](clodex/update-procedure.md) | Checking that the extension, CLI and clodex versions match, and updating both the VS Code extension and the terminal CLI (stop the proxy → update → patch → rebuild the launcher → start the proxy → reload) |
+| [troubleshooting.md](clodex/troubleshooting.md) | `EBUSY`/`EPERM` on install, missing models, `encrypted content could not be verified` |
+
 ### other
 | Folder | Notes |
 | --- | --- |

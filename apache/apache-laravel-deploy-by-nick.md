@@ -108,8 +108,14 @@ Set ownership and permissions:
 ```bash
 whoami  # Usually 'ubuntu'
 sudo chown -R www-data:ubuntu /var/www/html/
-sudo chmod -R 775 /var/www/html/
+sudo find /var/www/html/ -type d -exec chmod 775 {} \;
+sudo find /var/www/html/ -type f -exec chmod 664 {} \;
 ```
+
+> Folders 775 and files 664, not `chmod -R 775`, which puts the executable bit on every file.
+> Git tracks that bit, so a project cloned into `/var/www` would show every file as modified
+> and `git pull` would later refuse. See
+> [../git/git-pull-refuses-after-chmod-file-mode.md](../git/git-pull-refuses-after-chmod-file-mode.md).
 
 Create Laravel project:
 
@@ -247,8 +253,13 @@ Allow `whoami` user to write in `/var/www`:
 
 ```bash
 sudo chown -R www-data:ubuntu /var/www/
-sudo chmod -R 775 /var/www/
+sudo find /var/www/ -type d -exec chmod 775 {} \;
+sudo find /var/www/ -type f -exec chmod 664 {} \;
 ```
+
+If a project under `/var/www` already had `chmod -R 775` and `git pull` now refuses, run
+`git config core.fileMode false` in it. See
+[../git/git-pull-refuses-after-chmod-file-mode.md](../git/git-pull-refuses-after-chmod-file-mode.md).
 
 ---
 

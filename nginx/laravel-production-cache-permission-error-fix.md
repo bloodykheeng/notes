@@ -150,12 +150,18 @@ sudo chown -R www-data:www-data /var/www/niceprodapi/bootstrap/cache
 Run:
 
 ```bash
-sudo chmod -R 775 /var/www/niceapi/storage
-sudo chmod -R 775 /var/www/niceapi/bootstrap/cache
-
-sudo chmod -R 775 /var/www/niceprodapi/storage
-sudo chmod -R 775 /var/www/niceprodapi/bootstrap/cache
+for d in /var/www/niceapi /var/www/niceprodapi; do
+  sudo find $d/storage $d/bootstrap/cache -type d -exec chmod 775 {} \;
+  sudo find $d/storage $d/bootstrap/cache -type f -exec chmod 664 {} \;
+  git -C $d config core.fileMode false
+done
 ```
+
+Folders 775 and files 664, not `chmod -R 775`: the `-R` form puts the executable bit on every
+file, git tracks that bit, and the next `git pull` that touches a file under `storage` refuses
+with "Your local changes would be overwritten" although nobody edited anything.
+`core.fileMode false` makes each clone ignore permission bits for good. See
+[../git/git-pull-refuses-after-chmod-file-mode.md](../git/git-pull-refuses-after-chmod-file-mode.md).
 
 ---
 

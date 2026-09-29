@@ -223,9 +223,17 @@ Ownership (once, and again after any root-run command touched these folders):
 ```bash
 sudo chown -R www-data:www-data /var/www/testapi.example.com/storage \
   /var/www/testapi.example.com/bootstrap/cache
-sudo chmod -R 775 /var/www/testapi.example.com/storage \
-  /var/www/testapi.example.com/bootstrap/cache
+sudo find /var/www/testapi.example.com/storage /var/www/testapi.example.com/bootstrap/cache \
+  -type d -exec chmod 775 {} \;
+sudo find /var/www/testapi.example.com/storage /var/www/testapi.example.com/bootstrap/cache \
+  -type f -exec chmod 664 {} \;
+cd /var/www/testapi.example.com && git config core.fileMode false
 ```
+
+Folders 775 and files 664, never `chmod -R 775`: that puts the executable bit on every file,
+git tracks the bit, and the next pull that touches a fixture in `storage` refuses with "Your
+local changes would be overwritten". `core.fileMode false` makes the clone ignore permission
+bits for good. See [../git/git-pull-refuses-after-chmod-file-mode.md](../git/git-pull-refuses-after-chmod-file-mode.md).
 
 > Two rules that come with `config:cache`:
 >
@@ -488,6 +496,12 @@ sudo supervisorctl restart testapi.example.com-worker:* testapi.example.com-reve
 The worker restart is not optional: a queue worker keeps the old code in memory until
 restarted, which is the most common "my change is not working" on this stack.
 
+If `git pull` refuses with "Your local changes would be overwritten", do not stash or reset
+yet. Run `git diff --stat`: if every file shows `old mode 100644 / new mode 100755` and no
+content change, a `chmod -R` caused it and `git config core.fileMode false` fixes it. Anything
+with real content lines is somebody's edit. See
+[../git/git-pull-refuses-after-chmod-file-mode.md](../git/git-pull-refuses-after-chmod-file-mode.md).
+
 Frontend:
 
 ```bash
@@ -507,6 +521,7 @@ pm2 restart app_test
 | `SQLSTATE[HY000] [1698] Access denied for user 'root'` | App is using MySQL root (auth_socket). Use the per-environment user (section 5). |
 | `file_put_contents(.../storage/framework/cache...): Failed to open stream` | Something ran as root. Move cron to `www-data`, re-run the chown/chmod (section 6). |
 | Bare **500, empty body, nothing in `laravel.log`** (newest entry days old) | `laravel.log` is root-owned, so Laravel fails while logging the exception. `ls -la storage/logs/` then `chown -R www-data storage bootstrap/cache`. |
+| `git pull`: `Your local changes to the following files would be overwritten` on files nobody edited | Permission bits from a `chmod -R`. `git diff --stat` shows `old mode 100644 / new mode 100755` and no content; `git config core.fileMode false`, then pull. [../git/git-pull-refuses-after-chmod-file-mode.md](../git/git-pull-refuses-after-chmod-file-mode.md) |
 | A value you just put in `.env` has no effect | Config cache built before the edit. `php artisan config:show <key>`, then `config:clear && config:cache`, then restart the Supervisor programs. |
 | Supervisor `FATAL Exited too quickly` on the second Reverb | Both environments on the same `--port`. `grep -H command= /etc/supervisor/conf.d/*reverb*.conf`. |
 | Realtime events never arrive | Worker not running or stale (`supervisorctl restart ...-worker:*`), or `BROADCAST_CONNECTION` not `reverb`. |

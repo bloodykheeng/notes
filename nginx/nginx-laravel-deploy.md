@@ -238,6 +238,17 @@ sudo -u www-data touch storage/logs/laravel.log && echo "www-data CAN write" || 
 > nothing in the log**, because Laravel fails while trying to log the exception. See
 > [laravel-production-cache-permission-error-fix.md](laravel-production-cache-permission-error-fix.md).
 
+> **If you also `chmod`, give folders 775 and files 664, never `chmod -R 775`.**
+> `-R 775` puts the executable bit on every file, and git tracks that bit, so every file git
+> knows about under `storage` counts as locally modified. It stays silent until a commit
+> touches one of them, then `git pull` refuses with "Your local changes would be
+> overwritten". See [../git/git-pull-refuses-after-chmod-file-mode.md](../git/git-pull-refuses-after-chmod-file-mode.md).
+>
+> ```bash
+> sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
+> sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
+> ```
+
 After create the storage symbolic link
 ```bash
 sudo -u www-data php artisan storage:link
@@ -268,7 +279,8 @@ This is the web-accessible root. To allow uploads or public file creation:
 
 ```bash
 sudo chown -R www-data:www-data /var/www/ppda_laravel_api/public
-sudo chmod -R 775 /var/www/ppda_laravel_api/public
+sudo find /var/www/ppda_laravel_api/public -type d -exec chmod 775 {} \;
+sudo find /var/www/ppda_laravel_api/public -type f -exec chmod 664 {} \;
 ```
 
 #### 🗂 `public/file_share_attachments/`
@@ -277,7 +289,8 @@ If you have a subfolder specifically for file sharing:
 
 ```bash
 sudo chown -R www-data:www-data /var/www/ppda_laravel_api/public/file_share_attachments
-sudo chmod -R 775 /var/www/ppda_laravel_api/public/file_share_attachments
+sudo find /var/www/ppda_laravel_api/public/file_share_attachments -type d -exec chmod 775 {} \;
+sudo find /var/www/ppda_laravel_api/public/file_share_attachments -type f -exec chmod 664 {} \;
 ```
 
 ---
@@ -285,11 +298,15 @@ sudo chmod -R 775 /var/www/ppda_laravel_api/public/file_share_attachments
 ### 💡 Notes:
 
 - `chown` changes the owner to `www-data`, which allows the web server to write to those directories.
-- `chmod 775` gives:
+- `775` on folders gives:
 
-  - Owner (www-data): read, write, execute
-  - Group: read, write, execute
-  - Others: read and execute only
+  - Owner (www-data): read, write, enter
+  - Group: read, write, enter
+  - Others: read and enter only
+- `664` on files gives read and write to owner and group, read to others, and **no execute
+  bit**. Files never need it, and `public/` holds files git tracks (`index.php`,
+  `robots.txt`), so `chmod -R 775` there would make `git pull` refuse later. See
+  [../git/git-pull-refuses-after-chmod-file-mode.md](../git/git-pull-refuses-after-chmod-file-mode.md).
 
 ---
 

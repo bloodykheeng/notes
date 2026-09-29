@@ -145,15 +145,20 @@ cd /var/www/oagapi
 sudo chown -R www-data:www-data .
 sudo find . -type d -exec chmod 755 {} \;
 sudo find . -type f -exec chmod 644 {} \;
-sudo chmod -R 775 storage bootstrap/cache
+sudo find storage bootstrap/cache -type d -exec chmod 775 {} \;
+sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
 sudo chmod 640 .env
+git config core.fileMode false
 ```
 
 What each part does:
 
 - `chown -R www-data` — php-fpm runs as `www-data`; it must own or be able to read everything.
 - `755` on dirs — without `x` on a directory, PHP cannot descend into it.
-- `775` on `storage` + `bootstrap/cache` — these need **write**, not just read.
+- `775` on the folders and `664` on the files of `storage` + `bootstrap/cache`: these need
+  **write**, not just read. Not `chmod -R 775`, which also marks every file executable; git
+  tracks that bit and the next pull touching `storage` refuses. `core.fileMode false` makes
+  the clone ignore it. See [../git/git-pull-refuses-after-chmod-file-mode.md](../git/git-pull-refuses-after-chmod-file-mode.md).
 - `640` on `.env` — keeps DB password and Firebase private key off other users.
 
 Do **not** `chmod -R 777` the project. That makes `.env` world-readable.

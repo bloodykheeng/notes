@@ -65,7 +65,7 @@ Every note is written to be followed top to bottom and copy-pasted.
 | Folder | Notes |
 | --- | --- |
 | [ci-cd-pipelines/](ci-cd-pipelines/) | Next.js CI/CD to a VPS |
-| [git/](git/) | Switching HTTPS token auth to SSH |
+| [git/](git/) | Switching HTTPS token auth to SSH; [`git pull` refusing after `chmod -R`](git/git-pull-refuses-after-chmod-file-mode.md) (file mode changes, `core.fileMode false`) |
 | [sql/](sql/) | Export/import a database via File Browser |
 | [supabase/](supabase/) | Supabase crash course |
 | [reactnative-expo/](reactnative-expo/) | EAS builds (cloud, local, Docker, WSL), Expo dev on WSL |

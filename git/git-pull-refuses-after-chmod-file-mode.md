@@ -32,6 +32,23 @@ It stays invisible for as long as no commit touches those files. `git pull` only
 an incoming commit changes a file you have "modified". The day somebody updates a seed
 fixture in `storage/app`, the pull stops, and it looks like somebody edited the server.
 
+## Why one server has it and another does not
+
+Look at who you log in as.
+
+- **A non-root user** (a VPS where you log in as `user` or `ubuntu`, and the app runs as
+  `www-data`): both have to write to `storage`, you when you run commands and `www-data` when
+  the app runs. Sooner or later something fails with a permission error, and the quick fix is
+  group-writable permissions via `chmod -R 775`. That is the command that sets the bits.
+- **Root** (Linode and other boxes that hand you root by default): root can write anywhere,
+  nothing ever fails, nobody runs `chmod`, and the bits stay `100644`.
+
+So the same app, deployed the same way, pulls fine as root and refuses on the non-root box.
+The user is not what git checks, though: git compares permission bits whoever runs the pull,
+and root would stop on the same files if the `chmod` had been run there. A problem that really
+is about the user shows a different error, `Permission denied` or
+`detected dubious ownership in repository`.
+
 ## Diagnose first: mode or content?
 
 Never discard before looking. A real edit on a server is somebody's work.
@@ -101,5 +118,6 @@ sudo find storage bootstrap/cache -type f -exec chmod 664 {} \;
 
 - [../nginx/laravel-production-cache-permission-error-fix.md](../nginx/laravel-production-cache-permission-error-fix.md):
   ownership, the other half of storage permissions (root vs www-data).
-- Seen on the SDS portal, 2026-09-29: both APIs on the Datanet VPS had it, the web apps and
-  staging did not, because the `chmod` had only been run on the API folders.
+- Seen on the SDS portal, 2026-09-29: both APIs on the Datanet VPS (worked as a non-root `user`)
+  had it; the web apps there and the Linode staging box (worked as root) did not, because the
+  `chmod` had only been run on the Datanet API folders.

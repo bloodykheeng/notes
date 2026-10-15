@@ -36,6 +36,9 @@ Every note is written to be followed top to bottom and copy-pasted.
 | Note | What it covers |
 | --- | --- |
 | [firebase-messaging-sw-and-nextauth-google.md](nextjs/firebase-messaging-sw-and-nextauth-google.md) | One Firebase service worker for every environment (config via query string) and Sign in with Google with NextAuth v4 |
+| [primereact-tailwind-dark-mode-missing-classes.md](nextjs/primereact-tailwind-dark-mode-missing-classes.md) | PrimeReact's Tailwind preset + Tailwind 4: white-on-white selected options, date-picker days that look disabled, no "today" circle. Why (node_modules is never scanned) and the CSS that fixes it |
+| [laravel-validation-error-toasts-without-duplicates.md](nextjs/laravel-validation-error-toasts-without-duplicates.md) | The same Laravel 422 error shown in two toasts: why (Laravel's `message` repeats the first field error) and the hook logic that shows each thing once |
+| [primereact-inputnumber-zod-form-traps.md](nextjs/primereact-inputnumber-zod-form-traps.md) | InputNumber `onChange` vs `onValueChange`, `min`/`max` that only clamp the screen, `z.coerce` and 0 defaults letting empty fields through, AutoComplete text vs a picked item; plus an audit grep |
 
 ### linux
 | Note | What it covers |

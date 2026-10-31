@@ -9,6 +9,9 @@ Every note is written to be followed top to bottom and copy-pasted.
   full build of a fresh Ubuntu VPS for a Laravel API (queue workers, scheduler, Reverb) plus
   a Next.js frontend (pm2), two environments on one box, Nginx + Let's Encrypt. Includes the
   redeploy procedure and a troubleshooting table.
+- **[centos/laravel-nextjs-apache-centos-deploy.md](centos/laravel-nextjs-apache-centos-deploy.md)**:
+  the same stack on a CentOS / RHEL 8 box with Apache (httpd) and SELinux Enforcing, plus its
+  [redeploy procedure](centos/laravel-nextjs-apache-centos-redeploy.md).
 
 ## Contents
 
@@ -56,6 +59,12 @@ Every note is written to be followed top to bottom and copy-pasted.
 | [letsencrypt-apache.md](apache/letsencrypt-apache.md) | SSL on Apache |
 | [increase-php-upload-limit-apache.md](apache/increase-php-upload-limit-apache.md) | Upload limits |
 | [create-multiple-ips-aws.md](apache/create-multiple-ips-aws.md) | Multiple IPs on AWS |
+
+### centos
+| Note | What it covers |
+| --- | --- |
+| [laravel-nextjs-apache-centos-deploy.md](centos/laravel-nextjs-apache-centos-deploy.md) | Laravel API + Next.js on CentOS / RHEL 8 with httpd: what differs from Ubuntu + nginx (`apache` user, `conf.d`, certbot's `-le-ssl.conf` is the live site, SELinux booleans and `storage` labels, systemd queue worker instead of Supervisor, `next build --webpack` because of glibc 2.28, vault repos), full setup and a troubleshooting table ("Index of /" instead of the app, 503 from SELinux) |
+| [laravel-nextjs-apache-centos-redeploy.md](centos/laravel-nextjs-apache-centos-redeploy.md) | Every code change: API (down, pull, composer, migrate, optimize, chown, up, restart worker) and web (pull, `npm ci`, `next build --webpack`, pm2 restart), checks, `git pull` refusals, rolling back |
 
 ### clodex
 | Note | What it covers |

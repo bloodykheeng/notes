@@ -5,6 +5,10 @@ Every note is written to be followed top to bottom and copy-pasted.
 
 ## Start here
 
+- **[ai-agents/deploy-with-an-ai-agent.md](ai-agents/deploy-with-an-ai-agent.md)**: give this to the AI agent
+  before any deploy or redeploy. How we work (agent writes the commands, I run them and paste the output back),
+  read-only checks first, loops over environments, paste-safe blocks, secrets, and the
+  `docs/deployment.md` + `docs/redeployment.md` it must leave in the code repo.
 - **[nginx/laravel-nextjs-two-environments-deploy.md](nginx/laravel-nextjs-two-environments-deploy.md)**:
   full build of a fresh Ubuntu VPS for a Laravel API (queue workers, scheduler, Reverb) plus
   a Next.js frontend (pm2), two environments on one box, Nginx + Let's Encrypt. Includes the
@@ -14,6 +18,11 @@ Every note is written to be followed top to bottom and copy-pasted.
   [redeploy procedure](centos/laravel-nextjs-apache-centos-redeploy.md).
 
 ## Contents
+
+### ai-agents
+| Note | What it covers |
+| --- | --- |
+| [deploy-with-an-ai-agent.md](ai-agents/deploy-with-an-ai-agent.md) | The playbook for an AI agent deploying a Laravel + Next.js project with me: study the repo first, read-only server checks, env files made locally (fresh secrets, never in git), rounds of short verified blocks, `for` loops over environments, nothing interactive mid-paste, backups and asking before destructive steps, stop-all/restart-all on small boxes, secrets never echoed, and writing `docs/deployment.md` + `docs/redeployment.md` (plus a handoff) into the repo |
 
 ### nginx
 | Note | What it covers |

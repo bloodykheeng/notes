@@ -22,6 +22,7 @@ Every note is written to be followed top to bottom and copy-pasted.
 ### ai-agents
 | Note | What it covers |
 | --- | --- |
+| [build-laravel-nextjs-app-with-an-ai-agent.md](ai-agents/build-laravel-nextjs-app-with-an-ai-agent.md) | The playbook for an AI agent building a Laravel + Next.js business app with me: how we work (facts first, search best practice online, root cause, tests and docs with every change), folders, backend conventions (ULIDs, serial counters, enums, money, UTC, migrations, files), the maker/checker approval engine, roles and permissions, sessions and the portal cache bug, lists (pagination, URL state, 3-state sort, chips, one filter form, skeletons, typed exports), dialogs and forms, help text, documents, audit trail, Reverb realtime, reports, packages, testing and docs |
 | [deploy-with-an-ai-agent.md](ai-agents/deploy-with-an-ai-agent.md) | The playbook for an AI agent deploying a Laravel + Next.js project with me: study the repo first, read-only server checks, env files made locally (fresh secrets, never in git), rounds of short verified blocks, `for` loops over environments, nothing interactive mid-paste, backups and asking before destructive steps, stop-all/restart-all on small boxes, secrets never echoed, and writing `docs/deployment.md` + `docs/redeployment.md` (plus a handoff) into the repo |
 
 ### security

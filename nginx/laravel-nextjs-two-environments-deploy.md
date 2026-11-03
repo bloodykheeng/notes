@@ -429,7 +429,9 @@ user=www-data
 numprocs=1
 redirect_stderr=true
 stdout_logfile=/var/www/testapi.example.com/storage/logs/reverb.log
-stopwaitsecs=3600
+; Reverb has no job to finish, so it stops fast. A worker's 3600 here once hung a whole
+; supervisorctl restart for over ten minutes (security/php-node-security-patch.md 2.3).
+stopwaitsecs=10
 ```
 
 Same two files for `api.example.com` with `--port=8081`. Then:

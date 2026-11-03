@@ -26,6 +26,12 @@ secrets): it applies here too.
 - **Read-only first, changes after, a check after every change.** Downtime steps go after their checks. Chain a
   risky step to its check with `&&` or an `if`.
 - **Never tell me Ctrl+C is safe.** If the screen looks stuck: "press Enter once and wait, send a screenshot".
+  And tell me **not to press Ctrl+C before pasting** a block (a habit to "clear the line"): after `pm2 update` it
+  killed pm2 and both websites (3 Nov 2026).
+- **A long command that looks stuck: read it from a second SSH session**, never interrupt it. Give a read-only block
+  for the new tab (`supervisorctl status`, `ps -eo pid,etime,cmd | grep ...`) and decide from that.
+- **Commands that might wait a long time get a `timeout`** (`timeout 30 supervisorctl update`), and output sent to a
+  log gets a line saying it will be quiet for a while.
 - **Patch inside the line already running** (8.4.x to the fixed 8.4.x). Moving to a new line (8.4 to 8.5, Node 22
   to 24) is a separate upgrade with tests, done on dev and server together, and only if I ask.
 - **Ask before anything destructive** (deleting old PHP/Node versions, removing files the break-in check found).
@@ -75,6 +81,10 @@ You have a shell on my PC, so do section 1 of the guide directly, explaining as 
 | 7. Apps on new Node | 2.4 second block | the whole output | each app `script path` under the new version, `node.js version` new, args as in round 1, sites answer |
 | 8. Boot unit | 2.4 third block | the whole output | new version in `ExecStart` / `PATH`, `enabled`; do **not** start it |
 | 9. Final read | 2.1 again | the whole output | everything on the fixed versions; nothing else changed |
+| 10. Reboot (if asked) and OS security updates | 2.4b | the whole output | new kernel, `pm2-root` active, apps back on their own, 0 security updates left |
+
+Before round 5, read every Supervisor program's `stopwaitsecs` (2.3): a websocket server on the workers' 3600 can hang
+a restart for an hour.
 
 Build every round's commands from round 1's facts (real folders, real pm2 names and args, real Supervisor
 programs). On a box shared with other projects, restart only this project's programs

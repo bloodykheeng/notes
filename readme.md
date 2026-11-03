@@ -24,6 +24,12 @@ Every note is written to be followed top to bottom and copy-pasted.
 | --- | --- |
 | [deploy-with-an-ai-agent.md](ai-agents/deploy-with-an-ai-agent.md) | The playbook for an AI agent deploying a Laravel + Next.js project with me: study the repo first, read-only server checks, env files made locally (fresh secrets, never in git), rounds of short verified blocks, `for` loops over environments, nothing interactive mid-paste, backups and asking before destructive steps, stop-all/restart-all on small boxes, secrets never echoed, and writing `docs/deployment.md` + `docs/redeployment.md` (plus a handoff) into the repo |
 
+### security
+| Note | What it covers |
+| --- | --- |
+| [php-node-security-patch.md](security/php-node-security-patch.md) | Taking PHP and Node.js onto a security release (Oct 2026: PHP CVE-2026-109618/109619, fixed in 8.4.27 / 8.3.36 / 8.5.12; Node 24.22.1 / 22.23.4). Windows dev PC (Laragon: verified download, side-by-side install, imagick and `php.ini` carried over, the stale Machine PATH; nvm-windows), then the Ubuntu server: read-only inventory, break-in check, PHP-FPM upgrade for every version in `/etc/php`, workers restarted, Node through nvm with pm2 apps restarted from the new Node and the boot unit rewritten (never Ctrl+C after `pm2 update`) |
+| [patch-php-node-with-an-ai-agent.md](security/patch-php-node-with-an-ai-agent.md) | The same job given to an AI agent: facts from the source (php.net, nodejs.org JSON), the dev PC done by the agent, the server in nine checked rounds, and the `SECURITY-<date>.md` record it leaves in the project |
+
 ### nginx
 | Note | What it covers |
 | --- | --- |
@@ -81,6 +87,11 @@ Every note is written to be followed top to bottom and copy-pasted.
 | [README.md](clodex/README.md) | How clodex, the VS Code launcher and the proxy server fit together |
 | [update-procedure.md](clodex/update-procedure.md) | Checking that the extension, CLI and clodex versions match, and updating both the VS Code extension and the terminal CLI (stop the proxy → update → patch → rebuild the launcher → start the proxy → reload) |
 | [troubleshooting.md](clodex/troubleshooting.md) | `EBUSY`/`EPERM` on install, missing models, `encrypted content could not be verified` |
+
+### claude-code
+| Note | What it covers |
+| --- | --- |
+| [vscode-tab-stopped-responding.md](claude-code/vscode-tab-stopped-responding.md) | "Claude Code stopped responding in this tab" / the 60 s start-up timeout: reading the logs (extension host unresponsive, event-loop stalls, MCP servers), checking RAM and the page file, and the fixes (shorter chats, free disk, dead MCP servers) |
 
 ### other
 | Folder | Notes |

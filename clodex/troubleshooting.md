@@ -7,7 +7,10 @@
 | `clodex install-vscode-launcher` → `EPERM ... rename ... clodex-claude.exe` | A VS Code Claude chat is still using the exe | Close the Claude chats (or VS Code) and run it again |
 | OpenAI models missing from the picker | Claude Code updated and the patch is gone, or the extension and CLI versions differ | Run `clodex patch`, then `Ctrl+Shift+P` → **Developer: Reload Window**. Check the versions with step 0 of [update-procedure.md](update-procedure.md#0-check-the-versions-first) |
 | Claude won't start in VS Code at all | `clodex server --proxy` isn't running, or old proxy entries are still in `claudeCode.environmentVariables` | Start the server. Delete the `HTTPS_PROXY` / `HTTP_PROXY` / `NODE_EXTRA_CA_CERTS` entries |
-| Everything broke right after `nvm use <version>` | The launcher has the old Node path compiled in | Run `clodex install-vscode-launcher` again and reload the window |
+| "Claude Code stopped responding in this tab", or the 60 s start-up timeout | Usually not clodex: the machine stalled (RAM, page file, full C:) or a dead MCP server delays every start | Read the logs as in [../claude-code/vscode-tab-stopped-responding.md](../claude-code/vscode-tab-stopped-responding.md). `Proxy refused to open a tunnel: 502` only while the server restarts is normal |
+| Everything broke right after `nvm use <version>` | The launcher has the old Node path compiled in | Run `clodex install-vscode-launcher` again and reload the window. Full order: [update-procedure.md](update-procedure.md#after-a-node-version-switch-nvm-use) |
+| `clodex patch` → `The patch manifest records a different Claude Code install (...)` | The CLI is not the install clodex patched: a Node switch, or `node_modules` copied from the old Node (the copy is already patched, and the backup belongs to the old path) | `npm install -g @anthropic-ai/claude-code@latest` (a fresh, pristine install), match the extension's version, `clodex patch` |
+| `nvm uninstall <old>` → "Error removing", or `Access ... node.exe is denied` | A process started before `nvm use` still runs the old `node.exe` (it shows as `C:\nvm4w\nodejs\node.exe`) | Find it by start date, read its command line, stop it ([update-procedure.md](update-procedure.md#after-a-node-version-switch-nvm-use) step 5) |
 
 ---
 

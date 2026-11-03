@@ -125,9 +125,15 @@ clodex --version
 clodex patch
 ```
 
-You want to see **`Patched claude <same version as claude -v>`** and **`0 failed`** at the end.
+You want to see **`Patched claude <same version as claude -v>`** and, at the end,
+**`clodex patch: N applied, 0 skipped, 0 failed`** (12 applied with clodex 2.21.5 and Claude Code 2.1.317).
 
 > Run this again **every time** the CLI changes (step 4). A Claude Code update replaces the patched files.
+
+- **`The patch manifest records a different Claude Code install (...v22.19.0\...\claude.exe)`**: the CLI you
+  have now is not the one clodex patched (a Node switch, or `node_modules` copied from another Node). clodex
+  keeps the pristine backup per install path, so it refuses. Make this install pristine and patch again:
+  `npm install -g @anthropic-ai/claude-code@latest` (then step 4's version check), `clodex patch`.
 
 ## 7. Rebuild the VS Code launcher
 
@@ -135,9 +141,15 @@ You want to see **`Patched claude <same version as claude -v>`** and **`0 failed
 clodex install-vscode-launcher
 ```
 
-You want to see `Built C:\Users\bk\.clodex\bin\clodex-claude.exe`.
+You want to see `Built C:\Users\bk\.clodex\bin\clodex-claude.exe`, and a `runs:` line naming the Node you use
+now:
+
+```
+runs:     C:\nvm4w\nodejs\node.exe C:\Users\bk\AppData\Local\nvm\v22.23.4\node_modules\@bman654\clodex\dist\claude-wrapper.js
+```
 
 - `EPERM: operation not permitted, rename ... clodex-claude.exe`: a VS Code chat is still open. Go back to step 2, then run the command again.
+- The `runs:` line names an old Node folder: `nvm use` did not take, check `node -v` and run it again.
 
 > This one is required after a clodex update or a Node version switch (`nvm use`). The paths get compiled into the exe.
 
@@ -173,3 +185,35 @@ clodex server --proxy
 ```
 
 Then `Ctrl+Shift+P` → **Developer: Reload Window**, and do the step 0 check.
+
+---
+
+## After a Node version switch (`nvm use`)
+
+A new Node (a security release, say) means a new global folder (`%LOCALAPPDATA%\nvm\v<version>`), and
+everything clodex knows points at the old one: the patched Claude Code, the patch manifest
+(`C:\Users\bk\.clodex\patch-state.json`, `binaryPath`) and the launcher. Done on 3 Nov 2026 (22.19.0 to 22.23.4):
+
+1. Close the Claude chats and stop the server (steps 2 and 3).
+2. `nvm install <new>`, then `nvm use <new>`, then `node -v`.
+3. Install the tools **fresh** on the new Node. Do not copy `node_modules` over from the old version: the copied
+   `claude.exe` is the patched one, and `clodex patch` then refuses it (see step 6).
+
+   ```powershell
+   npm install -g @anthropic-ai/claude-code@latest
+   code --install-extension anthropic.claude-code --force    # extension = CLI version (step 4)
+   npm install -g @bman654/clodex@latest
+   clodex patch
+   clodex install-vscode-launcher                           # the runs: line names the new folder
+   clodex server --proxy
+   ```
+
+   Other global tools (codex, n8n, eas-cli, ...) need `npm install -g` on the new Node too: `npm ls -g --depth=0`
+   on the old one first gives the list.
+4. Reload Window, step 0 check, then a new chat with Terra/Luna.
+5. Remove the old Node: `nvm uninstall <old>`. **"Error removing"** / `Access to the path 'node.exe' is denied`:
+   a process started before the switch still runs the old `node.exe`. Task Manager or `Get-Process node` shows it
+   under `C:\nvm4w\nodejs\node.exe` (the link's name, not the old folder's), with a start date before the switch.
+   Find what it is with `Get-CimInstance Win32_Process -Filter "ProcessId=<id>" | Select CommandLine` (a
+   forgotten `relay.mjs --watch`, a dev server, an old Claude chat), stop it, start it again if you still want
+   it, then delete the folder.

@@ -18,6 +18,14 @@ touching any date, filter, report or chart.
    `2026-11-05` = to 23:59:59 on the 5th. A picked 1 pm to 3 pm stays 1 pm to 3 pm.
 6. **One helper turns request dates into query bounds** (`App\Support\DateBounds`). No controller hand-rolls
    date math.
+7. **No `date` columns in anything new: every date is `dateTime`, in UTC** (Letshego's rule, adopted by NICE
+   05/11/2026 at the user's request). A day ("from 9 November") is stored as **the first moment of that business
+   day in UTC** (`2026-11-08 21:00:00` for Kampala, never UTC midnight), written through a `Moment` cast (a bare
+   `Y-m-d` becomes that first moment; an instant is kept exactly), read back as the business day
+   (`DateBounds::businessDayOf()` or a model helper such as `effectiveFromDay()`), never `->toDateString()`,
+   which is the UTC day (the 8th). Compare a day with its first moment (`DateBounds::startInstant('2026-11-09')`).
+   One column type, one way to write, one way to read. Prove it with a test that reads the RAW stored value.
+   Calendar-date columns that already exist (an ERP's posting date) stay as they are.
 
 ## 2. Check the column kind before you change anything
 
@@ -148,6 +156,18 @@ Each of these cost a round of the user's time. They are about method, not dates.
     and dark), and say plainly when a screen change has not been seen in a browser.
 11. **"Lint clean" without a linter.** `next lint` is gone in Next 16 and the repo had no ESLint config, so
     there was nothing to run; say so, and check unused imports another way, instead of reporting it clean.
+12. **Checking that a cast exists, not which cast.** The cast sweep looked for datetime columns with no cast
+    and passed `order_date`, which had one: `'date'`. A `date` cast on a datetime column sends the UTC day at
+    midnight (an order at 01:15 in Kampala shows on the previous day) and feeds PHP the midnight value, so
+    code that correctly converted each order to Kampala time still bucketed it on the wrong day. List every
+    `date`/`date:` cast with its column type; only calendar-date columns may keep it.
+13. **Not reading what the forms send.** Fixing how a date is shown is half the job: the order edit dialogs
+    sent `order_date: moment().format()`, so every edit moved the order to the day of the edit. When a date
+    field matters to reports, read the create AND edit payloads, and look in the data for records whose date
+    jumped after creation.
+14. **Answer "are you sure?" with a run, not a re-explanation.** When the user doubted that the old order
+    number reused deleted numbers, the convincing answer was the old function copied from git, run on real
+    data in a rolled-back transaction, printing the reused number. Keep that kind of proof script ready.
 
 ## 6. Ship it with docs
 

@@ -67,8 +67,19 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 ## 3. Backend conventions (Laravel)
 
 - **Keys:** ULID primary keys everywhere. A ULID is ordered by creation time, **not** a business number.
-- **Human numbers** (account number, reference, serial) come from a counter: the highest used + 1 within its prefix
-  (`SerialCounter`), with a unique index. Never `orderBy('id')`, never `count() + 1` (deletes reuse numbers).
+- **Human numbers** (account number, reference, serial) come from a **counter table** (`serial_counters`: stem,
+  table_name, column_name, last_value) raised under a row lock (`SELECT ... FOR UPDATE`), plus a unique index on
+  the column. The counter never goes back, so a deleted record's number is never reissued. Never `orderBy('id')`,
+  never `count() + 1`, and not "highest used + 1" either: once the NEWEST record is deleted, highest + 1 gives its
+  number to the next one (proven on NICE 05/11/2026; Alpha still did it). Month and year in a number are the
+  business-timezone month, not `now()` in UTC. A backfill works the numbers out and sets the counters before it
+  adds the column, so a record created during the deploy cannot take a backfilled number. Reference: NICE API
+  `docs/reference-numbers.md`.
+  *Why reuse matters when the column is unique anyway:* the database stays clean, but the number has already
+  left it: notifications, prints, exports, emailed documents, WhatsApp, the audit trail. Reused, it points at a
+  different record, and a delete-then-recreate looks like an edit. **A number, once anyone has seen it, means
+  one record forever**; a unique index only guarantees one record at a time. A never-reused number leaves a
+  visible gap that the audit trail explains, which is what auditors expect.
 - **Fixed values are backed enums** cast on the model, stored as strings, mirrored in the frontend's `lib/enums`.
   Compare through the enum, never a hand-typed string.
 - **Money:** one base currency per ledger, nothing converts silently. Display at the currency's decimals (UGX 0,
@@ -92,6 +103,15 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   its baseline entries.
 - **Queues:** emails, notifications, approval fan-outs and PDFs run on the queue; OTP and onboarding mail send
   synchronously. A worker keeps the code it started with: restart it after changing a job, a mail or a template.
+- **Spreadsheet uploads: measure, then send in pieces and process on the queue.** File size misleads: on NICE
+  (05/11/2026) an 8,000-row sheet was 0.3 MB but took 12 s and 190 MB to read and 23 s and 240 MB to apply inside
+  one request. So: the browser sends 1 MB pieces with a progress bar (no server body limit sees more); the API
+  assembles them on a private disk, saves the upload as Reading and queues the read (progress counted on the
+  upload row, every 500 rows); the apply is queued too (one transaction, so a running bar, not a fake count); a
+  job's `failed()` puts the upload in Failed or back to Preview with the reason, never stuck. The page polls while
+  Reading/Applying. **Remember the user's action, don't infer it from an intermediate status**: a fast queue went
+  Preview -> Applied between two polls and the page never saw "Applying". Read with `setReadDataOnly(true)`.
+  A sheet bounded small by its nature (one row per subcategory) can stay in the request; say why.
 
 ## 4. Approvals (maker / checker)
 
@@ -142,6 +162,18 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   never show the previous page's rows under new filters. Spinners are for saving and sending only.
 - **One Export** per list or report: Excel, CSV and Print from the same rows, with **typed cells** (real dates and
   numbers, never formatted text).
+- **A new list is born with the house kit, not added on review**: the project's filter drawer (on NICE the shared
+  Sell-out Filters: channel, region, territory, route, in step with the top bar's Global Filters), an **Export all**
+  that walks every page with the filters and search applied and shows them before the download, and the API
+  honouring the same filters in the list, its counts, the rows a count opens, and the export. On NICE (05/11/2026)
+  the user had to ask for all of these on the new schedule page; also: actions belong to the tab they act on
+  (upload/template under Uploads, not above every tab), and a help (?) sits beside the heading it explains.
+- **A tab the URL can open, the URL must follow.** If `?tab=fulfilment` opens a tab, clicking another tab writes it
+  back (and drops one-shot params such as `&status=` that only the opening link meant). Otherwise a refresh or a
+  copied link lands on the wrong tab: on NICE (05/11/2026) the user arrived from a home card and the address said
+  `?tab=fulfilment` on every tab. When the page is keyed by its query (to reset on a new link), write with
+  `window.history.replaceState`, not `router.replace`, or every click starts the page again. Spec: click, assert
+  `toHaveURL`, reload, assert the tab.
 - Tables inside a page keep their page and size for the tab (`useTablePaging`, sessionStorage).
 - Deep links: `?open_<thing>_id=` opens a record's dialog (approvals link to records this way).
 
@@ -229,6 +261,13 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **Screens:** Playwright against the running local API and app with seeded data; specs in `e2e/staff|investor|guest`,
   one rule per test, sessions set by cookies from a helper; a screen change updates or adds its spec. Prove a spec by
   making it fail on the old code.
+- **The agent drives the browser itself, every time.** A new screen is not reported done with "not seen in a
+  browser": write its spec, run it against the local servers, save screenshots (light and dark) and LOOK at them.
+  On NICE (05/11/2026) the screenshots caught a bug every other check had passed: an applied upload's history read
+  "2 unchanged" because it was compared with the schedule it had just changed. Dark mode = the app's theme cookie
+  and a reload (toggling the `dark` class from the spec skips PrimeReact's theme and shows false colours); wait for
+  the table's loading text to go before the picture; a spec that writes names what it makes and deletes it in
+  `afterAll`. Then run the WHOLE suite: a change to a shared list can break another screen's spec.
 - `tsc --noEmit` clean, ESLint clean on changed files. Capture the real exit code (`cmd > out.txt; echo $?`,
   never `cmd | tail; echo $?`), and if the repo has no working linter, say so rather than "lint clean".
 - **Whole-API guards with `DB::pretend()`:** call every GET route inside `DB::pretend()` with a

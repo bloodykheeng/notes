@@ -75,7 +75,9 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   USD 2) through one helper (`Money::format` / `lib/money`); prices 4; units 2; exports keep the full number.
 - **Time:** store and send UTC (`...Z`, the frontend sends `toISOString()`). The business timezone only for day
   boundaries, schedules and reports (`BusinessDate`); the viewer's clock only for display. A local midnight stored as
-  21:00 the day before is correct: prove a timezone "bug" before fixing it.
+  21:00 the day before is correct: prove a timezone "bug" before fixing it. The full rules, the traps that reached
+  production (Laravel binding a Carbon without converting its timezone, end dates dropping the last day,
+  `whereDate`/`DATE()` on UTC columns) and how to check a whole app: [dates-and-timezones-with-an-ai-agent.md](dates-and-timezones-with-an-ai-agent.md).
 - **Migrations:** each gets its own spaced timestamp (`090000`, `091000`), never consecutive seconds. Foreign keys at
   the bottom with `foreign()`. Before go-live, edit the create migration (and roll it back on servers); after,
   forward migrations only. Delete policy: an owned child cascades, reference and audit rows restrict, set null only
@@ -168,6 +170,12 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - Dark mode on every screen; brand colours from tokens; no plain blue links in a branded app.
 - Scroll memory: a reload or Back returns to the same place on the page (`useScrollMemory` on the scrolling `main`).
 - Copy for people: plain words, no internal names, no em dashes.
+- **One timestamp format** from one helper (`formatDateTime()` → `23/08/2026 08:39:43 PM`) in every table,
+  details view and print; never `toLocaleString()` (its format follows the browser's language: NICE had six
+  formats for "Created At" across 78 files). Empty is `N/A`.
+- **New UI copies the nearest existing component's look**, light and dark: a hand-made hover next to
+  Highcharts ones must look like them (white, thin grey border, dark text in light mode). Check light mode
+  as well as dark before calling it done.
 
 ## 10. Audit trail
 
@@ -192,6 +200,16 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - Dashboard: one chart wrapper (Highcharts), each chart a component fed by its card's query; every figure has its
   formula in help; currencies never added together.
 - Book-wide reports are staff-only on the API.
+- **Charts read at a glance and in full:** a short amount on each bar or column ("3K", "412.5M"), the full
+  amount in the hover. A hover shows the period (and what a part-way period covers: "1st to today"), every
+  series together (Actual, SPLY, Target) with full figures, and the change, red down / green up. Never the
+  browser's `title` tooltip (late, unstyled, one line) and never a bare number without its currency.
+- **Comparisons are like for like:** a period so far against last year to the same date, everywhere; when a
+  rule like that is decided, check EVERY card actually follows it.
+- **Tally before saying "it matches":** each dashboard figure against the list its link opens (same filters),
+  and cards against each other, with the clock pinned to days that have data.
+- Every list a dashboard links to must read the link's URL (filters, sort, dates) and accept every value the
+  screen can send; give optional API parameters the screen's default (a missing `data_limit` was a 500).
 
 ## 13. Packages
 
@@ -211,7 +229,15 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **Screens:** Playwright against the running local API and app with seeded data; specs in `e2e/staff|investor|guest`,
   one rule per test, sessions set by cookies from a helper; a screen change updates or adds its spec. Prove a spec by
   making it fail on the old code.
-- `tsc --noEmit` clean, ESLint clean on changed files.
+- `tsc --noEmit` clean, ESLint clean on changed files. Capture the real exit code (`cmd > out.txt; echo $?`,
+  never `cmd | tail; echo $?`), and if the repo has no working linter, say so rather than "lint clean".
+- **Whole-API guards with `DB::pretend()`:** call every GET route inside `DB::pretend()` with a
+  `beforeExecuting` hook; queries are built and their bindings seen, nothing runs, no schema needed, seconds
+  for 150 routes. Good for rules about what reaches SQL (timezones, raw request values) and for pinning a
+  card's periods (`Carbon::setTestNow` + the bindings it sends). Assert most routes built a query, or the
+  guard can pass by reaching nothing.
+- **Prove every new test by putting the old code back** (copy the file aside, revert the hunk, run, restore).
+- Test the calendar edges: the 31st, 1 January, the first day of the financial year, 29 February.
 
 ## 15. Documentation the repo keeps
 

@@ -81,7 +81,8 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   one record forever**; a unique index only guarantees one record at a time. A never-reused number leaves a
   visible gap that the audit trail explains, which is what auditors expect.
 - **Fixed values are backed enums** cast on the model, stored as strings, mirrored in the frontend's `lib/enums`.
-  Compare through the enum, never a hand-typed string.
+  Compare through the enum, never a hand-typed string; the migration comment lists the values and names the enum.
+  Details and the traps: [enums-and-migrations.md](enums-and-migrations.md).
 - **Money:** one base currency per ledger, nothing converts silently. Display at the currency's decimals (UGX 0,
   USD 2) through one helper (`Money::format` / `lib/money`); prices 4; units 2; exports keep the full number.
 - **Time:** store and send UTC (`...Z`, the frontend sends `toISOString()`). The business timezone only for day
@@ -89,11 +90,17 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   21:00 the day before is correct: prove a timezone "bug" before fixing it. The full rules, the traps that reached
   production (Laravel binding a Carbon without converting its timezone, end dates dropping the last day,
   `whereDate`/`DATE()` on UTC columns) and how to check a whole app: [dates-and-timezones-with-an-ai-agent.md](dates-and-timezones-with-an-ai-agent.md).
-- **Migrations:** each gets its own spaced timestamp (`090000`, `091000`), never consecutive seconds. Foreign keys at
+- **Migrations:** each gets its own spaced timestamp (`090000`, `091000`), never consecutive seconds. Every column
+  written out (no loops), related columns grouped under a one-line comment with blank lines between groups,
+  explanations above the column ([enums-and-migrations.md](enums-and-migrations.md)). Foreign keys at
   the bottom with `foreign()`. Before go-live, edit the create migration (and roll it back on servers); after,
   forward migrations only. Delete policy: an owned child cascades, reference and audit rows restrict, set null only
   for disposable links; never orphan financial or KYC data.
-- **Columns** carry no entity prefix (`issuers.name`, not `issuer_name`). Repeatable lists are child tables.
+- **Columns** carry no entity prefix (`issuers.name`, not `issuer_name`). Repeatable lists are child tables. A JSON
+  column is suspect: ask whether it is a count you could GROUP BY or rows that deserve a table.
+- **Editable data that other records depend on** (schedules, price lists, registers): one master copy edited directly,
+  the facts that define what happened frozen on the records that use them, no versioned rows when a consumer already
+  freezes: [master-copy-and-snapshots.md](master-copy-and-snapshots.md).
 - **Files:** store disk-relative paths; delete through the model so `deleting` events remove the stored file; never
   bulk or cascade-delete file-bearing rows.
 - **Responses:** plain `JsonResource`; nest a relation only on `?include=` and make every list `include` what its
@@ -189,6 +196,13 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - Errors are handled globally (toasts from one handler); opt out per query with `meta.skipGlobalError`.
 - Forward the AbortSignal to axios through the whole `QueryFunctionContext`; invalidate full query keys, the current
   detail key first.
+- **A fixed-order form saved step by step** (NICE's merchandising modules, 05/11/2026): one row per run with a
+  `<step>_saved_at` per step, so "what is next" is read from the data, never stored. The API enforces the order under
+  `lockForUpdate` (two taps must not both pass "is it next"), refuses a step out of order or twice with a sentence
+  that names the next one, and starting twice returns the same row (a phone retrying after a dropped connection). A
+  reference value the person is judged against (a published price) is snapshotted when they first SEE it, not when
+  they finish, or a change in between moves the goalposts. Name the answer columns as the questions they answer;
+  null = not reached, never "No".
 
 ## 9. Help, text and look
 
@@ -213,6 +227,8 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 
 - Every create, update, delete, approval decision, sign-in and send is logged (Spatie activitylog) with the causer,
   the subject, the outcome and a diff built from `snapshotSchema()`: what was **written**, not what was asked for.
+  Every logged model declares a schema. The engine and how to upgrade an app that logs sentences:
+  [audit-trail-with-snapshot-schemas.md](audit-trail-with-snapshot-schemas.md).
 - Secrets never enter the log (passwords become `password_changed: true`).
 - The audit screen filters by module, event, user and date, paginates, and exports.
 

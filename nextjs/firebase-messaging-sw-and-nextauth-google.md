@@ -2,7 +2,8 @@
 
 Two code patterns that pair with
 [../integrations/google-workspace-mail-firebase-oauth-recaptcha.md](../integrations/google-workspace-mail-firebase-oauth-recaptcha.md)
-(where the values come from).
+(where the values come from). Token errors (`VersionError (1) < (2)`, `messaging/permission-blocked`) and how to
+check versions first: [firebase-push-token-errors-check-versions-first.md](firebase-push-token-errors-check-versions-first.md).
 
 ---
 

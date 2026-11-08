@@ -2,8 +2,8 @@
 
 For an AI agent adding or upgrading an audit trail in a Laravel + Next.js app. The reference implementation is
 **SDS** (`sdstool-laravel/docs/audit-trail.md`, `docs/snapshot-schema.md`) and **Alpha** (the same engine). **NICE**
-still logs a sentence and an id ("Customer 'X' was updated"); its upgrade is planned for after the scheduled journey
-plans module (the user, 06/11/2026: "schemas model by model for all, best practices, no escape hatches").
+was upgraded on 07/11/2026 (`nice-laravel-api-pase-two/docs/audit-trail-upgrade-plan.md`: decisions, how to write an
+entry, progress); section 5 below is what that upgrade found.
 
 ## 1. What an entry must answer
 
@@ -58,3 +58,40 @@ plans module (the user, 06/11/2026: "schemas model by model for all, best practi
    diffs after. A test lists the models that log and fails when one lacks a schema.
 4. No escape hatch: no "we will add schemas later" for some models, no free-text modules, no JSON dumps of whole
    requests in place of a diff.
+5. Re-file the old entries once (a data migration: the old action becomes the event, the module becomes the log
+   name), so the filters cover them.
+
+## 5. What the NICE upgrade found (07/11/2026)
+
+In the old entries:
+
+- **Secrets.** The SMS trait logged the whole text: one-time password codes and new accounts' passwords. An SMS entry
+  now keeps the recipient and the provider's answer; the re-filing migration removed the text from every old one.
+- **Noise.** A sync wrote "cron called", "dispatched", "job started", one entry per batch of a hundred, "complete" in
+  the trait and "success" in the job: forty per cent of the trail. One entry per action, with its result capped
+  (`boundedResult`: lists cut at 20, the number cut kept).
+- **Dumps.** Stack traces (26 calls), base64 photos in the request body, whole job payloads. A failure keeps its message
+  and file:line; a request value over 1,000 characters is kept as its size.
+- **Broken calls** that threw on their own failure path: an array passed as the description, request fields spread as
+  named arguments. Nobody noticed because the failure path is the one nobody runs.
+- **A past tense built as `"{$action}d"`**: "rejectd" in the events, the sentences and the answers people read.
+- **Who could read it:** any signed-in user, through the API. Now the people who see Settings; deletes a System Admin
+  only, each delete recording what it removed.
+
+Mistakes an agent made doing it, and the check that caught each:
+
+- **A converter guessed the record from the sentence** (`"... by {$user->name}"`) and logged the user as the subject of
+  a sell-in order. Caught by listing every converted call with its variable. Read the subject from the write, never the
+  description.
+- **The before-state captured in the wrong place:** before a null check, or overwritten by the method's own `$before`.
+  A script listed every `captureOriginal()` with the line it follows.
+- **`getChanges()` emptied by a `refresh()`** (and by a save made through a service), so an update showed no change.
+  `buildChanges()` now diffs the record's attributes; the presenter keeps only what moved.
+- **"No to No"**: a flag stored as empty, written as false. A field whose old and new read the same is left out.
+- **A module named after a class that was not a case** (`Job`, `DataSync`): it would have thrown in production code
+  paths no test ran. Grep every `AuditModule::X` against the enum.
+- **A converter run twice inserted a line twice.** Make a converter skip what it already did, and grep for doubles.
+- **A trace replaced in an application `Log::error()`**, where a trace belongs. Look at the call before changing its
+  arguments.
+- Proof that is not a test: drive the real endpoints on a copy (create, update, delete, a failed sign-in) and read every
+  entry back; and plant a call that breaks the rule to see the coverage test fail.

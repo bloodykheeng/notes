@@ -66,6 +66,11 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 
 ## 3. Backend conventions (Laravel)
 
+- **Allowed values go through `Rule::in([...])` or `Rule::enum(X::class)`, never the string `'in:'.implode(',', $list)`.**
+  The string form splits on every comma, so a value that holds one ("Unplanned, with a plan") is refused as invalid
+  while every other value works: NICE's dashboard links to two statuses failed with "The selected status is invalid"
+  for days (10/11/2026). The same for any code that joins values with commas and splits them back (a survey's
+  multi-select answer "Yes, sometimes"): keep them as an array, or as one row per value.
 - **Keys:** ULID primary keys everywhere. A ULID is ordered by creation time, **not** a business number.
 - **Human numbers** (account number, reference, serial) come from a **counter table** (`serial_counters`: stem,
   table_name, column_name, last_value) raised under a row lock (`SELECT ... FOR UPDATE`), plus a unique index on

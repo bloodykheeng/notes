@@ -32,7 +32,7 @@ touching any date, filter, report or chart.
 | Kind | Example | Compare with | Group by day with |
 | --- | --- | --- | --- |
 | UTC instant (datetime/timestamp) | `order_date`, `checkin_date`, `created_at` | UTC instants | the business day: `DATE(CONVERT_TZ(col,'+00:00','+03:00'))` |
-| Calendar date (a day, no time) | an ERP posting date `DATE` column; days off stored `00:00:00` | the business calendar date (`Y-m-d`) | `DATE(col)` (already a business day) |
+| Calendar date (a day, no time) | an ERP posting date `DATE` column (a real `date` type only) | the business calendar date (`Y-m-d`) | `DATE(col)` (already a business day) |
 
 **Measure, do not assume:** compare a client-sent column with `created_at` on the same rows, and look at
 the time-of-day distribution of a "date" column. Durations and before/after between two real instants are
@@ -99,6 +99,17 @@ timezone-free: leave them alone.
     day), "Aug 22, 2026", `toLocaleString()`... Two helpers only: a moment as `DD/MM/YYYY hh:mm:ss A`, a day as
     `DD/MM/YYYY`, and which one comes from the column's kind, not from the field's name (`bc_order_date` is a day,
     `order_date` a moment: a name-based rule got it wrong). Date pickers show the same `dd/mm/yy`.
+
+18. **A `dateTime` column with a `date` cast, and readers taking the UTC day.** NICE's days off were stored right
+    (the first moment of the Kampala day in UTC, "24 Nov" = `2026-11-23 21:00:00`) and read wrong everywhere: the
+    `date` cast, a list sent as raw text with no `Z`, `whereDate`, `DATE()`, `substr(.., 0, 10)`, `toDateString()`,
+    and a Kampala Carbon bound unconverted in 18 copied blocks. Older rows at `00:00` UTC hid it for months. Fix the
+    READERS: one model scope and one helper that take any input and compare by business day, every copy pointed at
+    them, the list sent with its `Z`, a command to move old rows to the first moment (dry run first), and remove the
+    guard test's exemption for that column.
+19. **The reverse: a calendar `DATE` column compared with a UTC moment.** `bc_postingDate >= '2026-10-31 21:00:00'`
+    counts the 31st's invoices in November. A calendar date takes a business day (`'2026-11-01'`). Make the guard test
+    fail on it (a UTC `21:00:00`/`20:59:59` bound to a `DATE` column), and prove it by planting one.
 
 ## 4. How to check a whole app
 
@@ -210,6 +221,12 @@ Each of these cost a round of the user's time. They are about method, not dates.
     ("did you check well or are you just rushing to finish?"). Search for the BEHAVIOUR (a clock read at load time),
     with a parser, not for the spelling you fixed first. Same for the display formats: list every `.format("...")`
     and `toLocale*` with its argument and group them, instead of fixing the screen in the screenshot.
+
+16. **"Fixing" the storage against the rule.** When a day off picked as the 24th showed the 23rd, the agent changed
+    the API to store `2026-11-24 00:00:00`, a calendar day in a `dateTime` column, against the house rule (UTC, a day
+    as its first moment), and the user had to stop it: "the API must be standard... it's the clients that correct
+    themselves". When a date reads wrong, check the rule first, then find the reader that breaks it; never bend the
+    stored value to suit a broken reader.
 
 ## 6. Ship it with docs
 

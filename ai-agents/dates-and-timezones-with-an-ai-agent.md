@@ -82,12 +82,32 @@ timezone-free: leave them alone.
     module level runs once, the first time the module is imported, and react-hook-form reads `defaultValues` at
     mount, so every later "Create" offers that first moment (a form opened at 03:13 offered 02:53, and only
     picking another date then "Now" showed the right time). Make it a function, `makeDefaultValues()`, called
-    when the form mounts. Sweep for it: `grep -rln "^const defaultValues" app | xargs grep -l "new Date()"`.
+    when the form mounts. **Do not sweep for it with grep**: that grep found eight forms and missed three that
+    wrote `moment().toDate()` (the user found the survey form offering 03:04 at 03:11, the same day). Parse the
+    files instead: walk each file's TypeScript syntax tree and report any `new Date()`, `Date.now()`, `moment()` or
+    `dayjs()` that is not inside a function (NICE's `scripts/find-load-time-dates.cjs`, 60 lines, `npm run
+    check:dates`, exits 1 on a hit). It also catches a frozen `z.date().max(new Date())` and a calendar `maxDate`.
     Testing it is a trap too: with a create dialog the module only loads when the dialog first opens, so "load the
     page at a fixed clock, open the form" passes on the broken code. Open the form, close it, move the clock
     (Playwright `page.clock.setFixedTime`), open it again, and prove the test fails on the old code.
 
+16. **Carbon 3's `diffIn*` is signed.** `now()->diffInMinutes($createdAt)` is NEGATIVE for a past `$createdAt` on
+    Carbon 3 (Laravel 11+), so NICE's "code older than 10 minutes" test was never true and password reset codes
+    never expired. Compare moments instead (`$createdAt->lt(now()->subMinutes(10))`), or take `abs()` when you
+    really want a distance. Grep every `diffIn` and read which way round it is.
+17. **Forty display formats.** Dates were shown as "October 15th 2026", `LLL` (which printed "12:00 AM" on a plan's
+    day), "Aug 22, 2026", `toLocaleString()`... Two helpers only: a moment as `DD/MM/YYYY hh:mm:ss A`, a day as
+    `DD/MM/YYYY`, and which one comes from the column's kind, not from the field's name (`bc_order_date` is a day,
+    `order_date` a moment: a name-based rule got it wrong). Date pickers show the same `dd/mm/yy`.
+
 ## 4. How to check a whole app
+
+0. **Start from the migrations** (the user's method, 09/11/2026, and the right one): list every `date`,
+   `dateTime`/`datetime` (PHP is case-insensitive, so match both) and `timestamp` column, then for each column read
+   the model's cast, the validation, the queries, what each client SENDS for it (JSON `Date`, `toISOString()`,
+   `moment().format()` with offset, or a naive string), and how the web SHOWS it. Classify each as a moment, a day
+   stored as a moment, or a calendar date. Fixing screens one complaint at a time misses the rest; the inventory does
+   not. NICE's is in its timezone guide, section 13a (54 columns).
 
 1. **Snapshot the reports first** (golden master: save each report's JSON, compare after a change).
 2. **A guard test with `DB::pretend()` (seconds, runs in CI forever).** Call every GET route without route
@@ -184,6 +204,12 @@ Each of these cost a round of the user's time. They are about method, not dates.
 14. **Answer "are you sure?" with a run, not a re-explanation.** When the user doubted that the old order
     number reused deleted numbers, the convincing answer was the old function copied from git, run on real
     data in a rolled-back transaction, printing the reused number. Keep that kind of proof script ready.
+
+15. **A sweep for one name.** The frozen-default sweep looked for `const defaultValues` holding `new Date()`, so it
+    missed the same bug written with `moment()` in three more forms, and the user found it the same afternoon
+    ("did you check well or are you just rushing to finish?"). Search for the BEHAVIOUR (a clock read at load time),
+    with a parser, not for the spelling you fixed first. Same for the display formats: list every `.format("...")`
+    and `toLocale*` with its argument and group them, instead of fixing the screen in the screenshot.
 
 ## 6. Ship it with docs
 

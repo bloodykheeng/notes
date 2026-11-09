@@ -95,3 +95,25 @@ Mistakes an agent made doing it, and the check that caught each:
   arguments.
 - Proof that is not a test: drive the real endpoints on a copy (create, update, delete, a failed sign-in) and read every
   entry back; and plant a call that breaks the rule to see the coverage test fail.
+
+## 6. Sign-ins, password resets, and which app (NICE, 09/11/2026)
+
+**Record every authentication step** under one module (`Authentication`), the person as the causer when known:
+`logged_in`, `login_failed` (the identifier typed, never the password), `login_refused` (inactive account, role with
+no access), `logged_out`, `password_reset_code_sent` (by which channels, never the code),
+`password_reset_code_email_failed` / `_sms_failed`, `password_reset_code_refused` (wrong or expired: repeated ones are
+someone guessing), `password_reset`, the confirmation's delivery failures, and a password changed on a profile. Alpha
+and GiftNest record the same set; check EVERY way in, NICE's third sign-in (the AI connector's browser page) recorded
+nothing.
+
+**Name the app on every entry, not only on sign-ins.** Give each client its own token name at sign-in (NICE:
+`auth_token` for the dashboard, `mobile_auth_token` for the Flutter app, Passport for the connector) and have the
+audit trait read `$request->user()->currentAccessToken()->name` on every entry; before sign-in fall back to the user
+agent (`Dart/` is the app, a browser the dashboard); outside a request it is `System`. An enum for the values, a column
+and a filter on the screen. Document that the token names must not change.
+
+**What reading the reset controller turned up** (read the whole flow, not just where the log call goes): codes that
+never expired (Carbon 3's signed `diffInMinutes`), a person with only a phone number who could not ask for a code (a
+non-null `email` column), the SMS signed with ANOTHER SYSTEM's name (copied from an older project: grep the repo for
+other projects' names), one channel's failure stopping the other, and `$e->getMessage()` returned to the screen. Prove
+each with a test that fails on the old code (put the old file back, run, restore).

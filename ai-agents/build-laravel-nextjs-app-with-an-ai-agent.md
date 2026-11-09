@@ -194,6 +194,13 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **Record dialogs** use one hook (`useRecordDialog`): closing hides the dialog and keeps the record, so the content
   does not vanish mid-fade. Never null the record in `onHide`.
 - **Details dialogs are calm**: a label/value grid, no hero stat boxes. Maximizable; sized for their content.
+- **A view is its own read-only screen, never the create form with its fields disabled** (web and mobile). A
+  disabled form keeps the input boxes and the empty space of every field (an empty description box), and reads as
+  "something I can type in". NICE's Flutter app did this for expenses and journey plans; the brief given to the app's
+  agent (10/11/2026): one `DetailRow(label, value)` and one `DetailSection(title, children)`, reused by every view;
+  forms only for create and edit.
+- **An infinite list says where it is:** skeletons on the first load, "Showing 20 of 134" with a small spinner while
+  more pages exist, "That's all: 134" at the end (from the API's `total`), pull to refresh back to page 1.
 - **A details dialog reads the record first and the approval last**: what was asked for (the order, its items, the
   amounts, the metadata), then the approval timeline and the decision at the bottom, where the approver acts after
   reading. NICE put a pre-sale order's approval above its items and the user rejected it (09/11/2026, "someone needs
@@ -288,6 +295,11 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **API:** Pest feature tests per rule (`php artisan test --compact --filter=...`), Pint, Larastan. The full suite
   before committing a cross-cutting change. A test that only fails in the full run means shared state (a static, a
   cache): find it.
+- **A table check that runs while the table is loading checks nothing.** Skeleton rows are rows: a spec that waited
+  for "Showing 1 to" (the paginator still showed the old figures) read the skeleton cells, filtered out the blanks and
+  passed with no row checked (NICE, 10/11/2026). Wait for the RESPONSE of the filtered request
+  (`page.waitForResponse`, not `waitForRequest`), then for the skeletons to go (`tbody .p-skeleton` count 0), and
+  assert there were rows (`length > 0`) before asserting what is in them.
 - **Screens:** Playwright against the running local API and app with seeded data; specs in `e2e/staff|investor|guest`,
   one rule per test, sessions set by cookies from a helper; a screen change updates or adds its spec. Prove a spec by
   making it fail on the old code.

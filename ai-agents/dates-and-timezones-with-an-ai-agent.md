@@ -70,6 +70,22 @@ timezone-free: leave them alone.
 13. **Why nobody noticed:** a 3-hour shift only touches the edges of a day or month (3 orders in 2,093 in
     one month), and when every report shares it they agree with each other. Cross-checking two screens
     shows nothing; checking against the raw database does.
+14. **A mobile app that sends local time without its offset.** Dart's `DateTime.now().toIso8601String()` gives
+    `2026-11-09T03:01:45`, no `Z`, no `+03:00`; the API reads it as UTC, so an order placed at 03:02 reads
+    06:01 (NICE, 09/11/2026). The same app sent the expense time as a bare day, which became 00:00 UTC, 03:00 in
+    Kampala, and sorted above a later expense. Check-in was right, because someone had fixed that one endpoint
+    after a bug; nobody checked the others. When the app touches dates, list EVERY date field it sends on every
+    write endpoint, create one record per field at a known clock time, and read it back on the web. The app's
+    fix is one helper (`t.toUtc().toIso8601String()`) used everywhere. Fields validated `before_or_equal:now`
+    refuse such times outright (they land 3 hours in the future), which is how the trouble usually shows first.
+15. **A form's default date frozen when the file loaded.** `const defaultValues = { date: new Date(), ... }` at
+    module level runs once, the first time the module is imported, and react-hook-form reads `defaultValues` at
+    mount, so every later "Create" offers that first moment (a form opened at 03:13 offered 02:53, and only
+    picking another date then "Now" showed the right time). Make it a function, `makeDefaultValues()`, called
+    when the form mounts. Sweep for it: `grep -rln "^const defaultValues" app | xargs grep -l "new Date()"`.
+    Testing it is a trap too: with a create dialog the module only loads when the dialog first opens, so "load the
+    page at a fixed clock, open the form" passes on the broken code. Open the form, close it, move the clock
+    (Playwright `page.clock.setFixedTime`), open it again, and prove the test fails on the old code.
 
 ## 4. How to check a whole app
 

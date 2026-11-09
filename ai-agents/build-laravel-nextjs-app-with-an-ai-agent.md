@@ -189,6 +189,15 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **Record dialogs** use one hook (`useRecordDialog`): closing hides the dialog and keeps the record, so the content
   does not vanish mid-fade. Never null the record in `onHide`.
 - **Details dialogs are calm**: a label/value grid, no hero stat boxes. Maximizable; sized for their content.
+- **A details dialog reads the record first and the approval last**: what was asked for (the order, its items, the
+  amounts, the metadata), then the approval timeline and the decision at the bottom, where the approver acts after
+  reading. NICE put a pre-sale order's approval above its items and the user rejected it (09/11/2026, "someone needs
+  to first see the order details and items"). Check every dialog that carries an approval, not only the one reported.
+- **The sidebar is grouped**: a small heading over each group, related pages folded under one parent, children on a
+  guide line with a dot, the menu with everything folded fitting a laptop screen. See
+  [nextjs/dashboard-sidebar-groups.md](../nextjs/dashboard-sidebar-groups.md).
+- **Form defaults are built when the form mounts**, never a module-level constant holding `new Date()` (it freezes at
+  the first import; [dates note](dates-and-timezones-with-an-ai-agent.md), trap 15).
 - **Forms**: react-hook-form + zod, in numbered sections; the API answers per field with the true reason and the form
   shows it on the field. A computed figure is read-only and computed on the API too (never trust a typed total).
 - **Confirm** before anything final (post, decline, delete), inline in the same box or a confirm dialog.

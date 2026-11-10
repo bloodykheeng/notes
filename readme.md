@@ -72,6 +72,7 @@ Every note is written to be followed top to bottom and copy-pasted.
 | [github-ssh-authentication.md](linux/github-ssh-authentication.md) | SSH keys for Git hosting |
 | [fail2ban-installation-and-ssh-protection.md](linux/fail2ban-installation-and-ssh-protection.md) | SSH hardening |
 | [install-google-authenticator-on-linux.md](linux/install-google-authenticator-on-linux.md) | 2FA on SSH |
+| [server-unreachable-host-or-app.md](linux/server-unreachable-host-or-app.md) | Every site on a VPS times out: telling a host outage from an app fault (curl, ports, `tracert`), what to check in the provider panel, how long it was off and how it ended (`journalctl --list-boots`, no shutdown lines = hard stop), MySQL recovery, failed jobs and missed schedules, and who asks the provider (Hostinger: hPanel chat, ask for a human) |
 
 ### apache
 | Note | What it covers |

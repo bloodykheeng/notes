@@ -6,7 +6,12 @@ is **how we build**: the conventions every screen and endpoint follows, the trap
 together. Read it fully before writing code, then read the project's own `CLAUDE.md`, `AGENTS.md` and `docs/`: the
 project's word beats this file where they differ.
 
-Worked example of everything below: the Alpha Fund system (`alpha-fund-laravel/docs/*.md`, `alpha-fund-nextjs/docs/`).
+**Read [who-i-am-and-how-i-work.md](who-i-am-and-how-i-work.md) first** (me, how I talk and decide, the bar, the
+rules I keep repeating), and [letshego-field-sales-lessons.md](letshego-field-sales-lessons.md) for the newest worked
+example and the corrections it took.
+
+Worked example of everything below: the Alpha Fund system (`alpha-fund-laravel/docs/*.md`, `alpha-fund-nextjs/docs/`);
+Letshego Field Sales (`letshego-workspace`) for the field-sales domain, dashboards and reports.
 Sibling playbooks: [deploy-with-an-ai-agent.md](deploy-with-an-ai-agent.md), and patching servers in
 [../security/patch-php-node-with-an-ai-agent.md](../security/patch-php-node-with-an-ai-agent.md).
 
@@ -36,6 +41,11 @@ Sibling playbooks: [deploy-with-an-ai-agent.md](deploy-with-an-ai-agent.md), and
 - **Low-RAM PCs:** heavy checks one at a time (full test suites, `tsc`, a full browser run); lint changed files only.
   A full browser run against the local API makes it slow for the person using it: run it when they are away.
 - **Ask before anything destructive** (dropping data, deleting files, force pushes, migrations on live data).
+- **Brainstorm, then decide, then record.** A new module starts as a model in plain words, agreed before any table;
+  a question gets your view and one recommendation; what I settle goes into the workspace's `docs/decisions.md`
+  (date, decision, why in my words, where the detail lives) the same turn. A round of change gets a plan file.
+- **One report means every instance.** When I point at a problem on one screen, find and fix the same problem on
+  every screen before answering ("hope it's not in other places").
 
 ## 2. Repos and folders
 
@@ -108,6 +118,10 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   freezes: [master-copy-and-snapshots.md](master-copy-and-snapshots.md).
 - **Files:** store disk-relative paths; delete through the model so `deleting` events remove the stored file; never
   bulk or cascade-delete file-bearing rows.
+- **Derived facts are read, never stored** (Letshego: a client's stage from what they have, in one SQL `case` used by
+  lists, filters and sorts). A state people enter and leave (dropped, reopened) is a **flag with its own history
+  table** (who, when, why, the stage at that moment), not one more stage. A record's **History is read from the
+  stored facts** (one `UNION ALL` of the event tables, paged in SQL, words built on the API), never a log kept twice.
 - **Responses:** plain `JsonResource`; nest a relation only on `?include=` and make every list `include` what its
   dialogs read (no N+1, no lazy loading: strict mode is on in development).
 - **Config:** `env()` only inside `config/` (servers cache config).
@@ -170,7 +184,9 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **Status chips** above the list with counts from the API (one `StatusCounts` query), and **one Filters button**
   opening one row form for every other filter (dates as `start_date` / `end_date` end to end); applied filters show
   as removable chips.
-- **Loading = a shaped skeleton** (`isPending`), never a spinner in an empty area, and **no `placeholderData`**:
+- **Loading = a shaped skeleton** (`isPending`), on record pages too (composed from the page's own blocks: header,
+  figure cards, tabs, details, table, map, in its grid; Letshego `RecordSkeleton.tsx`), never one grey block, never bars bunched to the left of a table (one cell per column across the width, the toolbar,
+  the View button, the pager), and never a spinner in an empty area, and **no `placeholderData`**:
   never show the previous page's rows under new filters. Spinners are for saving and sending only.
 - **One Export** per list or report: Excel, CSV and Print from the same rows, with **typed cells** (real dates and
   numbers, never formatted text).
@@ -187,6 +203,20 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   `window.history.replaceState`, not `router.replace`, or every click starts the page again. Spec: click, assert
   `toHaveURL`, reload, assert the tab.
 - Tables inside a page keep their page and size for the tab (`useTablePaging`, sessionStorage).
+- **No hidden default filters.** A list with no filter in the URL shows everyone; any narrowing is a visible,
+  removable chip. Letshego's pipeline hid dropped clients by default with nothing showing and the user thought a
+  client was lost (10/11/2026). Rows in a special state stay in the list with a tag (a red "Dropped").
+- **Back returns to the list where it was left** (page, filters, search, sort): each list saves its address as it
+  changes (sessionStorage, per tab) and record pages' back buttons and the breadcrumb read it (Letshego
+  `lib/listReturn.ts`, `useListReturn(path)`); the first paint uses the bare path so the markup matches the server.
+  The sidebar opens a list fresh. Spec: open a record from page 3, press back, assert `page=3` in the URL.
+- **No blank page between pages** (Next App Router): a `loading.tsx` per route segment (the dashboard's picks the shape
+  by path; record routes their own) and a fallback on every `<Suspense>` (a bare one shows nothing while it waits), in
+  the shape of the coming page. Letshego: `RecordSkeleton.tsx`, `app/dashboard/loading.tsx`. Prove it with `next build`.
+- **A column most rows leave empty starts hidden** (`visible: false`; a plan's Description): it stays in the column
+  menu and the export, and the row keeps its width for what is filled.
+- **Filter words say what they do** ("Not dropped", not "Working"), and never reuse a word the same dialog already
+  uses for something else ("Active" was the record status).
 - Deep links: `?open_<thing>_id=` opens a record's dialog (approvals link to records this way).
 
 ## 8. Dialogs and forms
@@ -279,6 +309,15 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   and cards against each other, with the clock pinned to days that have data.
 - Every list a dashboard links to must read the link's URL (filters, sort, dates) and accept every value the
   screen can send; give optional API parameters the screen's default (a missing `data_limit` was a 500).
+- **Every figure opens its rows, through a small arrow at the card's corner, never the whole card** (NICE's
+  `OpenLink`; Letshego `KpiCard`/`ChartCard` `href`). The link carries the page's period and place as the target
+  list's own filters so the list counts exactly the same rows; add the API filter when it is missing (paid out,
+  approved, rejected, withdrawn, dropped in these days). The arrows are **quiet**: shown on hover or keyboard focus,
+  always on touch screens ("too many arrows, people lose concentration", 10/11/2026).
+- **A report shows the records behind its figures** (the loans with their clients, switchable by what was counted),
+  as the standard table with its own Export, beside the charts and the page's Export and print.
+- A chosen period shows as chosen when the dialog reopens (Pick days highlights the matching quick pick); legends
+  sit under charts in narrow cards; never show a figure the system does not compute.
 
 ## 13. Packages
 

@@ -5,6 +5,11 @@ Every note is written to be followed top to bottom and copy-pasted.
 
 ## Start here
 
+- **[ai-agents/who-i-am-and-how-i-work.md](ai-agents/who-i-am-and-how-i-work.md)**: give this to any AI coding agent
+  first. Who I am, how I talk (fast, screenshots, "what's your view"), how we decide and record decisions, how a
+  project is set up (workspace, CLAUDE.md, plan, decisions, handoffs, docs as we go, commit only when asked), the
+  quality bar, and every rule I have had to repeat (lists, confirms, no hidden filters, back keeps the list's place,
+  card arrows, reports with records, data rules). Then the build or deploy playbook below.
 - **[ai-agents/deploy-with-an-ai-agent.md](ai-agents/deploy-with-an-ai-agent.md)**: give this to the AI agent
   before any deploy or redeploy. How we work (agent writes the commands, I run them and paste the output back),
   read-only checks first, loops over environments, paste-safe blocks, secrets, and the
@@ -22,6 +27,8 @@ Every note is written to be followed top to bottom and copy-pasted.
 ### ai-agents
 | Note | What it covers |
 | --- | --- |
+| [who-i-am-and-how-i-work.md](ai-agents/who-i-am-and-how-i-work.md) | Read first, every project: me, how to read my messages, how decisions are made and recorded, what decides (and what does not), project setup, the "professional not vibe-coded" bar, the rules I keep repeating (data, API, lists, dialogs, forms, dashboards, reports, maps, mobile), and how to work in a session |
+| [letshego-field-sales-lessons.md](ai-agents/letshego-field-sales-lessons.md) | The Letshego Field Sales story (Oct–Nov 2026): prototype first, the workspace, the foundation copied from GiftNest, decisions as they were made (client vs customer, stage read never stored, drop as a flag, reach by assignment), a table of the mistakes an agent made with my correction and the rule now, the patterns worth reusing (list memory for Back, card arrows, report scope, timeline from facts) and the process lessons |
 | [build-laravel-nextjs-app-with-an-ai-agent.md](ai-agents/build-laravel-nextjs-app-with-an-ai-agent.md) | The playbook for an AI agent building a Laravel + Next.js business app with me: how we work (facts first, search best practice online, root cause, tests and docs with every change), folders, backend conventions (ULIDs, serial counters, enums, money, UTC, migrations, files), the maker/checker approval engine, roles and permissions, sessions and the portal cache bug, lists (pagination, URL state, 3-state sort, chips, one filter form, skeletons, typed exports), dialogs and forms, help text, documents, audit trail, Reverb realtime, reports, packages, testing and docs |
 | [dates-and-timezones-with-an-ai-agent.md](ai-agents/dates-and-timezones-with-an-ai-agent.md) | Dates done right in Laravel + Next.js + a mobile app: store and query UTC, "a day" from one business timezone, bare date = whole day and a time = exact; the column kinds (UTC instant vs calendar date); the traps that were live in production (Laravel binds a Carbon without converting its timezone, an end date that drops the last day, `whereDate`/`DATE()` on UTC columns, browser `new Date("YYYY-MM-DD")`, pickers that discard the time, MySQL TIMESTAMP and the DB session timezone, uncast datetime columns, Carbon's month overflow, caches); how to check a whole app (golden master, a `DB::pretend()` guard test, a real-data detector, tallies of dashboard figures against the lists they link to, static sweeps); and the method mistakes an agent made on NICE, so the next one does not |
 | [master-copy-and-snapshots.md](ai-agents/master-copy-and-snapshots.md) | Editable data and its history: one master copy edited directly, facts frozen on the records that use them (SDS standards per inspection period; NICE's journey plan schedule, first built with versioned rows and rebuilt), live identities referenced directly, no keys to mutable rows, changes applied forward, upload modes and ownership so mistakes clean up in one step, and a checklist |

@@ -242,6 +242,13 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **Record dialogs** use one hook (`useRecordDialog`): closing hides the dialog and keeps the record, so the content
   does not vanish mid-fade. Never null the record in `onHide`.
 - **Details dialogs are calm**: a label/value grid, no hero stat boxes. Maximizable; sized for their content.
+- **Short facts together, long blocks across the whole row.** In a two-column details grid the short values (ids,
+  names, dates, statuses) sit together first; anything long (a JSON payload, an exception and its stack trace, notes,
+  a message body) takes the full row (`md:col-span-2`), all such blocks in the same box, a very long one scrolling in
+  its box (`max-h-[28rem] overflow-auto`) instead of stretching the dialog. The box must stand out from the dialog in
+  dark mode too (on PrimeReact's dark dialog, `gray-800`, use `gray-900`). NICE's failed job details put the exception
+  in half the width beside Failed At while the payload had the whole row (12/11/2026, the user: "the payload has the
+  full row, same to the exception"). Check every details dialog with a long block, not only the one reported.
 - **A view is its own read-only screen, never the create form with its fields disabled** (web and mobile). A
   disabled form keeps the input boxes and the empty space of every field (an empty description box), and reads as
   "something I can type in". NICE's Flutter app did this for expenses and journey plans; the brief given to the app's

@@ -139,6 +139,12 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   Preview -> Applied between two polls and the page never saw "Applying". Read with `setReadDataOnly(true)`.
   A sheet bounded small by its nature (one row per subcategory) can stay in the request; say why.
 
+- **A closure only sees its `use` list.** A variable set outside and read inside a `function () use (...)` without
+  being listed, or set inside and read after, is "Undefined variable" at run time only, and the editor reports it only
+  for open files (NICE 12/11/2026: route bulk delete answered 500 for five days, `$routes` missing from the
+  transaction closure's `use`; a search branch never ran because `empty($validatedData)` hid the same mistake). Keep a
+  whole-app guard: a tokenizer script (NICE `scripts/check-closure-scope.php`) run by a unit test.
+
 ## 4. Approvals (maker / checker)
 
 - One generic engine for every approvable module: **Draft → Pending Approval → Active**, workflows with ordered steps
@@ -213,6 +219,18 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **No blank page between pages** (Next App Router): a `loading.tsx` per route segment (the dashboard's picks the shape
   by path; record routes their own) and a fallback on every `<Suspense>` (a bare one shows nothing while it waits), in
   the shape of the coming page. Letshego: `RecordSkeleton.tsx`, `app/dashboard/loading.tsx`. Prove it with `next build`.
+  **The layout's own `<Suspense>` is the one that bites** (NICE, 12/11/2026): a sidebar calling `useSearchParams` makes
+  everything inside the nearest boundary render in the browser only on prerendered pages; NICE's dashboard layout
+  wrapped the whole frame in a bare `<Suspense>`, so every page's HTML was empty there and the screen stayed blank until
+  the JavaScript ran. Give that boundary the frame plus the page's shape as its fallback; do not narrow it to the
+  sidebar (the pages then render on the server, where Highcharts and other browser-only modules break `next build`).
+- **The theme before the first paint:** prerendered pages cannot read the theme cookie, and a provider's `useEffect`
+  applies it after hydration, so dark users see white first. An inline `<head>` script reads the cookie, sets
+  `dark`/`light` on `<html>` (`suppressHydrationWarning` on `<html>`) and CREATES the UI library's theme `<link>` itself
+  (Letshego's `THEME_SCRIPT`). Never let the script edit a `<link>` React rendered: React redraws `<head>`, warns
+  "Encountered a script tag while rendering React component", and a theme switch later throws "removeChild ... at
+  link". Never make the root layout read `cookies()` for it (every page turns dynamic). Nothing the server renders may
+  depend on the theme (one fixed label on the toggle, colours through CSS `dark:`).
 - **A column most rows leave empty starts hidden** (`visible: false`; a plan's Description): it stays in the column
   menu and the export, and the row keeps its width for what is filled.
 - **Filter words say what they do** ("Not dropped", not "Working"), and never reuse a word the same dialog already
@@ -319,6 +337,14 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - A chosen period shows as chosen when the dialog reopens (Pick days highlights the matching quick pick); legends
   sit under charts in narrow cards; never show a figure the system does not compute.
 
+- **Never `console.log` a whole TanStack Query result:** v5 results carry a `promise` created already rejected
+  ("experimental_prefetchInRender feature flag is not enabled"; handled, harmless) and Node prints it with a stack on
+  every render, flooding the dev terminal (NICE had 54). Log `.data` / `.status`; never enable the experimental flag
+  to hide it.
+- **`<Image>` declares the file's own width and height** (read the SVG/PNG), CSS sets the shown size; another ratio
+  makes the browser resize one side and Next warns. The largest first paint is `loading="eager"` (`priority` is
+  deprecated in Next 16); a `fill` image has `sizes`.
+
 ## 13. Packages
 
 - Prefer what the project already uses; add a package only for a real need, after checking it is maintained, its
@@ -330,6 +356,32 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   never on a server.
 
 ## 14. Testing
+
+- **Loading states are proved on a production build, not `next dev`** (dev neither prerenders nor prefetches): build
+  against the local API (`NEXT_PUBLIC_API_BASE_URL=... next build`, it writes beside `next dev`'s `.next/dev`), serve
+  on another port beside the dev server, and give the spec an env flag so it skips otherwise. First load = block only
+  `/_next/static/*.js` (CSS must still load; the inline theme script still runs) in a fresh context per page, with
+  `serviceWorkers: "block"` (a push worker serves requests around `page.route`). Between pages = hold the
+  navigation's RSC request only (let `next-router-prefetch` through) and `router.push`; release with
+  `unrouteAll({ behavior: "ignoreErrors" })`. Expect "drawn by the server" for pages that read `searchParams`
+  (dynamic) and "arrived at once" for pages prefetched whole: both are fine, an empty page area is not. Stopping a
+  background `next start` via the task leaves the node process holding the port: stop it by its command line.
+- **The same e2e setup in every project** (Alpha, Letshego and NICE agree; copy it, do not invent): Playwright against
+  the running `composer dev` + `npm run dev`, one worker, 180 s per test (first visits compile), projects per role
+  with a setup project minting sessions through tinker and a teardown revoking them, `npm run e2e` / `e2e:ui`,
+  **`trace: "retain-on-failure"`** (NICE had `"on-first-retry"` with `retries: 0`: no failed test ever kept a trace),
+  `npx playwright show-trace test-results/<test>/trace.zip` to step through a failure.
+- **One page-health helper, used by every spec that opens a page** (Alpha `e2e/helpers/pageHealth.ts`, extended on
+  NICE): `watchPageHealth(page)` before the first `goto`, `expectOpensCleanly(page, path, problems)` after: no uncaught
+  script error (`pageerror`: an uncaught error never reaches `console`; a console-only check missed "removeChild ...
+  at link"), no API 5xx, no hydration / next/image / "script tag" warning. Add each warning you fix to its list.
+- **No `waitForTimeout` to wait for the app** (Alpha's rule): wait for the thing (`toBeVisible`, `waitForResponse`,
+  skeletons gone). An exception says why on its line (an animation before a screenshot; a cached prefetch sends nothing).
+- **One run at a time:** each run's teardown revokes its sessions, so a second run started meanwhile signs the first
+  out half way. Start the full suite in the background, keep working on docs, rerun failures after it ends.
+- **Tell the person what a background process is before it runs, and why** ("a production build on 3001 beside your
+  dev server on 3000, stopped after"): a stopped server's task reports a failure code (127), which read to the user as
+  the app failing (NICE, 12/11/2026).
 
 - **API:** Pest feature tests per rule (`php artisan test --compact --filter=...`), Pint, Larastan. The full suite
   before committing a cross-cutting change. A test that only fails in the full run means shared state (a static, a

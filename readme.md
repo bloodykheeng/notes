@@ -76,6 +76,7 @@ Every note is written to be followed top to bottom and copy-pasted.
 | Note | What it covers |
 | --- | --- |
 | [jobs-and-queues.md](linux/jobs-and-queues.md) | Laravel scheduler (cron) and queue workers (Supervisor) |
+| [laravel-production-logs-and-debug.md](linux/laravel-production-logs-and-debug.md) | `APP_DEBUG=false`, daily logs kept 30 days (`LOG_STACK=daily`, `LOG_DAILY_DAYS`), business refusals kept out of the log (`ShouldntReport`, not `report()` false), the one-box fix for a live server with backup and `config:show` checks, and reading daily logs by their entry headers |
 | [github-ssh-authentication.md](linux/github-ssh-authentication.md) | SSH keys for Git hosting |
 | [fail2ban-installation-and-ssh-protection.md](linux/fail2ban-installation-and-ssh-protection.md) | SSH hardening |
 | [install-google-authenticator-on-linux.md](linux/install-google-authenticator-on-linux.md) | 2FA on SSH |

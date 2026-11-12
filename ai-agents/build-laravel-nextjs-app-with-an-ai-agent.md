@@ -144,7 +144,8 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   with a stack trace: NICE logged every refused check-in that way (89 MB, real errors buried, 12/11/2026). Note
   `report()` returning `false` does NOT stop it: Laravel then falls back to the default reporting. Test it with
   `Exceptions::fake()` + `assertNotReported()`. And production runs `APP_DEBUG=false` with daily logs
-  (`LOG_STACK=daily`, `LOG_DAILY_DAYS=30`) from the first deploy.
+  (`LOG_STACK=daily`, `LOG_DAILY_DAYS=30`) from the first deploy:
+  [../linux/laravel-production-logs-and-debug.md](../linux/laravel-production-logs-and-debug.md).
 - **A closure only sees its `use` list.** A variable set outside and read inside a `function () use (...)` without
   being listed, or set inside and read after, is "Undefined variable" at run time only, and the editor reports it only
   for open files (NICE 12/11/2026: route bulk delete answered 500 for five days, `$routes` missing from the

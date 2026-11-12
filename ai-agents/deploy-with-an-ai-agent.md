@@ -99,8 +99,10 @@ Generate the server env files **locally**, in a folder **outside every git repo*
   id/key/secret (`shuf -i 100000-999999 -n 1`, `openssl rand -hex 10`). The web file's
   `NEXT_PUBLIC_REVERB_APP_KEY` must equal its API's `REVERB_APP_KEY`.
 - Production values: `APP_ENV=production`, `APP_DEBUG=false`, real `APP_URL` / `FRONTEND_URL`,
-  `CORS_ALLOWED_ORIGINS` with the real web origins, `LOG_LEVEL=warning`, `REVERB_HOST` = public API host, port 443,
-  scheme https; `REVERB_SERVER_PORT` = that environment's internal port.
+  `CORS_ALLOWED_ORIGINS` with the real web origins, `LOG_LEVEL=warning`, **`LOG_CHANNEL=stack`, `LOG_STACK=daily`,
+  `LOG_DAILY_DAYS=30`** (one log file per day, 30 kept: a single `laravel.log` reached 89 MB on NICE), `REVERB_HOST` =
+  public API host, port 443, scheme https; `REVERB_SERVER_PORT` = that environment's internal port. Fixing these on a
+  server that is already live, and reading daily logs: [../linux/laravel-production-logs-and-debug.md](../linux/laravel-production-logs-and-debug.md).
 - Test environments: payments in sandbox, SMS to the log, unless I say otherwise.
 - I paste each file on the server with `rm -f .env && nano .env` (**never a heredoc** for an env file: long pasted
   heredocs get mangled), then `chown root:www-data .env && chmod 640 .env`.
@@ -280,3 +282,8 @@ When I ask for a redeploy, read `docs/redeployment.md` in the repo first and fol
 commits bring (`git log`, lock files, migrations, new env keys in `.env.example`) and tell me before running it if
 something needs more than the usual block: a new env value, a new queue/cron/service, a new seeder, a new
 `NEXT_PUBLIC_*` (rebuild). If the doc turns out wrong or incomplete, fix the doc as part of the job.
+
+After every redeploy, read the log **since the deploy** by its entry headers (`grep -E '^\['` on today's
+`laravel-YYYY-MM-DD.log`, never just a `tail` of a stack trace) and sort each kind: expected lines, rules doing their
+job, real faults. On the first redeploy of a server, check `APP_DEBUG` is `false` and the log is daily; if not, fix
+both with the box in [../linux/laravel-production-logs-and-debug.md](../linux/laravel-production-logs-and-debug.md).

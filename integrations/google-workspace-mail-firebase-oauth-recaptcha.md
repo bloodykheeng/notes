@@ -137,9 +137,17 @@ projects). Check the project selector at the top before every step.
    - Create > copy Client ID and secret (secret shown once; download the JSON).
 
 ```env
+# Next.js
 GOOGLE_CLIENT_ID=<client id>.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=<secret>
+
+# Laravel: the same client id (no secret). The API checks every Google ID token was issued to it.
+GOOGLE_CLIENT_ID=<client id>.apps.googleusercontent.com
 ```
+
+The API must verify Google's ID token itself and never sign anyone in on an email the browser posts (a real hole in
+two projects, 12 Nov 2026). Code and tests:
+[../nextjs/firebase-messaging-sw-and-nextauth-google.md](../nextjs/firebase-messaging-sw-and-nextauth-google.md) §2.
 
 A client ID starts with the project **number**, a quick way to see which project it belongs
 to. `redirect_uri_mismatch` at sign-in = the current `NEXTAUTH_URL` is not on the client.

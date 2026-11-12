@@ -65,7 +65,7 @@ Every note is written to be followed top to bottom and copy-pasted.
 ### nextjs
 | Note | What it covers |
 | --- | --- |
-| [firebase-messaging-sw-and-nextauth-google.md](nextjs/firebase-messaging-sw-and-nextauth-google.md) | One Firebase service worker for every environment (config via query string) and Sign in with Google with NextAuth v4 |
+| [firebase-messaging-sw-and-nextauth-google.md](nextjs/firebase-messaging-sw-and-nextauth-google.md) | One Firebase service worker for every environment (config via query string) and Sign in with Google: NextAuth v4 for the handshake, the API verifies Google's ID token (never a posted email), with tests |
 | [firebase-push-token-errors-check-versions-first.md](nextjs/firebase-push-token-errors-check-versions-first.md) | `VersionError (1) < (2)` and `messaging/permission-blocked` when getting a push token: Firebase 13 raised its IndexedDB to v2, `localhost:3000` storage is shared by every project, how to compare versions in five minutes, the guard that drops a newer copy, and why restarting never helps |
 | [primereact-tailwind-dark-mode-missing-classes.md](nextjs/primereact-tailwind-dark-mode-missing-classes.md) | PrimeReact's Tailwind preset + Tailwind 4: white-on-white selected options, date-picker days that look disabled, no "today" circle. Why (node_modules is never scanned) and the CSS that fixes it |
 | [laravel-validation-error-toasts-without-duplicates.md](nextjs/laravel-validation-error-toasts-without-duplicates.md) | The same Laravel 422 error shown in two toasts: why (Laravel's `message` repeats the first field error) and the hook logic that shows each thing once |

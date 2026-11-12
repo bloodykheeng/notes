@@ -292,6 +292,25 @@ pm2 save
 pm2 startup   # run the command it prints
 ```
 
+Rotate pm2's own logs (`~/.pm2/logs`), which nothing rotates by default. A plain `logrotate` rule, not
+`pm2 install pm2-logrotate` (no extra pm2 process, no npm download on the server):
+
+```bash
+cat > /etc/logrotate.d/pm2-root <<'EOF'
+/root/.pm2/logs/*.log {
+    weekly
+    maxsize 20M
+    rotate 8
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+}
+EOF
+logrotate -d /etc/logrotate.d/pm2-root 2>&1 | grep -iE "error|rotating pattern"   # a pattern line, no error
+```
+
 ---
 
 ## 8. Nginx
@@ -414,6 +433,9 @@ user=www-data
 numprocs=8
 redirect_stderr=true
 stdout_logfile=/var/www/testapi.example.com/storage/logs/worker.log
+; Supervisor rotates this file itself; without these it keeps 50 MB x 10 per program.
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=5
 stopwaitsecs=3600
 ```
 
@@ -429,6 +451,8 @@ user=www-data
 numprocs=1
 redirect_stderr=true
 stdout_logfile=/var/www/testapi.example.com/storage/logs/reverb.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=5
 ; Reverb has no job to finish, so it stops fast. A worker's 3600 here once hung a whole
 ; supervisorctl restart for over ten minutes (security/php-node-security-patch.md 2.3).
 stopwaitsecs=10

@@ -22,6 +22,19 @@ the names.
 A **test** server may keep `APP_DEBUG=true` if the team wants the details on screen while testing, but it is still on
 the internet: decide it, do not inherit it.
 
+**The other logs on the box** (checked on Alpha's VPS, 12 Nov 2026):
+
+| Log | Rotated by | Set it |
+| --- | --- | --- |
+| Laravel | its daily channel | the table above |
+| Supervisor programs (`worker.log`, `reverb.log`) | Supervisor itself, 50 MB x 10 by default | `stdout_logfile_maxbytes=10MB`, `stdout_logfile_backups=5` in each conf, then `supervisorctl reread && supervisorctl update` (restarts them) |
+| pm2 (`~/.pm2/logs`) | nothing by default | a `logrotate.d/pm2-root` rule (weekly, `maxsize 20M`, 8 kept, `copytruncate`): `nginx/laravel-nextjs-two-environments-deploy.md` section 7 |
+| Nginx, MySQL, PHP-FPM, fail2ban | Ubuntu's `logrotate.d` | nothing; check the files exist |
+| The journal | journald's size cap | `journalctl --disk-usage` |
+
+Check them all at once: `du -sh ~/.pm2/logs; grep -H maxbytes /etc/supervisor/conf.d/*.conf; ls /etc/logrotate.d/;
+journalctl --disk-usage; ls -lh /var/www/*api*/storage/logs/`.
+
 ## 2. Business refusals are not errors
 
 An exception that means "the rule worked" (a check-in outside the radius, a closed visit, a limit reached) should

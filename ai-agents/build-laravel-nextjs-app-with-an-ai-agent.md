@@ -46,6 +46,12 @@ Sibling playbooks: [deploy-with-an-ai-agent.md](deploy-with-an-ai-agent.md), and
   (date, decision, why in my words, where the detail lives) the same turn. A round of change gets a plan file.
 - **One report means every instance.** When I point at a problem on one screen, find and fix the same problem on
   every screen before answering ("hope it's not in other places").
+- **One project's lesson is checked in the others.** When a bug turns up while copying a pattern from another of my
+  projects, the agent writes that project a note (`<workspace>/notes-for-<project>/<topic>.md`: where in its code,
+  the effect, the fix used here, the test that proves it, any decision to make first) and changes nothing there. The
+  agent working on the other project verifies each point in its own code, searches best practice, fixes what holds,
+  then marks the note **Resolved** at the top (date, commits, what was decided, what did not apply) so the first
+  project's agent knows. NICE -> Alpha, 5 and 12 Nov 2026: the reference-number note found two real bugs.
 
 ## 2. Repos and folders
 
@@ -86,10 +92,12 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   table_name, column_name, last_value) raised under a row lock (`SELECT ... FOR UPDATE`), plus a unique index on
   the column. The counter never goes back, so a deleted record's number is never reissued. Never `orderBy('id')`,
   never `count() + 1`, and not "highest used + 1" either: once the NEWEST record is deleted, highest + 1 gives its
-  number to the next one (proven on NICE 05/11/2026; Alpha still did it). Month and year in a number are the
+  number to the next one (proven on NICE 05/11/2026; Alpha fixed 12/11/2026). Key the counter row by table, column
+  and stem together when a stem holds free text (a product code can spell another series' stem). Tests: delete the
+  newest and create one more (its number must not come back), and a clock at 22:00 UTC on the last day of a month. Month and year in a number are the
   business-timezone month, not `now()` in UTC. A backfill works the numbers out and sets the counters before it
   adds the column, so a record created during the deploy cannot take a backfilled number. Reference: NICE API
-  `docs/reference-numbers.md`.
+  `docs/reference-numbers.md`, Alpha API `docs/reference-numbers.md` and `tests/Feature/SerialNumbersTest.php`.
   *Why reuse matters when the column is unique anyway:* the database stays clean, but the number has already
   left it: notifications, prints, exports, emailed documents, WhatsApp, the audit trail. Reused, it points at a
   different record, and a delete-then-recreate looks like an edit. **A number, once anyone has seen it, means
@@ -185,6 +193,19 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   Choose the title in the parent layout from the same cookie.
 - Signing out cancels in-flight queries and clears the session; sign-in clears the query cache before the new session.
 - Login: email OTP second factor, reCAPTCHA v3, rate limits. Social sign-in through a bridge page.
+- **Social sign-in: the API never believes the browser.** Alpha's and SDS's `social-login` took `email` and
+  `provider_id` from the request body and issued a token for whoever had that email: a forged POST with an admin's
+  address got a Super Admin token, no password, no OTP (found 12 Nov 2026). The bridge sends only Google's `id_token`
+  (kept in next-auth's JWT from `account.id_token`, session `maxAge` 5 minutes); the API checks it with Google
+  (`aud` = our client id, `iss` Google, unexpired, `email_verified`), fails closed, and uses only the token's own
+  `sub` and email. **Never create a user from a social sign-in.** Copy Letshego's or Alpha's `GoogleIdToken` +
+  `GoogleSignInTest` (the old forged body must get 422). The API needs `GOOGLE_CLIENT_ID` too. Full code, tests and
+  env: `nextjs/firebase-messaging-sw-and-nextauth-google.md` §2.
+- **Every sign-in path finishes the same way**: AuthContext `login()` then a fresh load. Alpha's Google bridge only
+  stored the cookie, so the app thought nobody was signed in: a three-item sidebar and an "N/A" profile while the data
+  calls (reading the cookie) worked.
+- **Grep a new project for both on day one**: `grep -rn "provider_id\|social" app/Http/Controllers` and read what the
+  bridge posts.
 - No platform user is created for a client until their account is approved (track the applicant by email).
 - Full write-up: Alpha's `alpha-fund-nextjs/docs/switching-users-on-one-tab.md`.
 
@@ -238,6 +259,30 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   "Encountered a script tag while rendering React component", and a theme switch later throws "removeChild ... at
   link". Never make the root layout read `cookies()` for it (every page turns dynamic). Nothing the server renders may
   depend on the theme (one fixed label on the toggle, colours through CSS `dark:`).
+  **If the root layout already reads `cookies()`** (Alpha: theme and session, so every page is drawn on request), no
+  script is needed: put `dark`/`light`, `data-theme` and `color-scheme` on `<html>` from the cookie on the server.
+  Alpha had read the cookie and still sent `<html>` without the class (the provider added it after hydration): a white
+  flash on every load until 12/11/2026. Check the HTML the server sends (`page.request.get(url)`), not the DOM.
+- **A crash never shows the bare "Application error" screen** (Alpha had no error boundary at all until 12/11/2026):
+  an `error.tsx` in each portal (it renders inside the portal's layout, so the sidebar stays and the user can go
+  elsewhere), `app/error.tsx` for public pages, and `app/global-error.tsx` (it replaces the whole document: its own
+  `<html>`/`<body>`, inline styles, no providers; a plain `<form action="/" method="get">` button to leave, since
+  `<a>` and `location.assign` trip Next's lint rules and a client navigation runs through the broken app). One shared
+  panel: what happened in plain words, Try again, Go to the start page, the `digest` as a reference. **Next 16.4's
+  props are `error: unknown` and `retry()`**, not `reset()` with `Error & { digest }`: read
+  `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/error.md`. Keep `console.error` in
+  production (`removeConsole: { exclude: ["error"] }`): a bare `removeConsole: true` strips the crash's only trace.
+- **Browser extensions and translators.** Extensions (Grammarly, ColorZilla, Scrnli) write attributes on `<html>` and
+  `<body>` before React starts: `suppressHydrationWarning` on **both** tags (it ignores those tags' own attributes
+  only; never put it deeper to quiet a real mismatch). A browser translator (Google Translate) replaces text nodes
+  React still holds, and the next update throws "Failed to execute 'removeChild' on 'Node'" (a `NotFoundError`):
+  `suppressHydrationWarning` does nothing for that. For a single-language app turn translation off
+  (`<html translate="no">` + `<meta name="google" content="notranslate">`; a translator can also garble figures),
+  and let the error panel recognise a `NotFoundError` and say "turn off translation for this site".
+- **Never put a secret in a `NEXT_PUBLIC_` variable**: any one the code reads is compiled into the JavaScript every
+  visitor downloads. A Reverb client needs only the app KEY, host, port and scheme; the app SECRET stays on the API.
+  Alpha's web env files carried `NEXT_PUBLIC_REVERB_APP_SECRET` (12/11/2026): no code read it, so it was never
+  shipped, but one careless reference would ship it. Delete such a line rather than rely on nobody using it.
 - **A column most rows leave empty starts hidden** (`visible: false`; a plan's Description): it stays in the column
   menu and the export, and the row keeps its width for what is filled.
 - **Filter words say what they do** ("Not dropped", not "Working"), and never reuse a word the same dialog already
@@ -249,6 +294,11 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **Record dialogs** use one hook (`useRecordDialog`): closing hides the dialog and keeps the record, so the content
   does not vanish mid-fade. Never null the record in `onHide`.
 - **Details dialogs are calm**: a label/value grid, no hero stat boxes. Maximizable; sized for their content.
+  Build them on one shared piece (Alpha's `components/common/RecordDetails.tsx`: `DetailsDialog` with the one status
+  badge in the title, `DetailSection`, `DetailField`, `RecordAuditSection`) so a copied template cannot drift: Alpha
+  had 14 dialogs copied from one old file with blue icons, the raw `#ULID` shown and two label styles.
+- **A loading page or section has the content's shape**, never a centred spinner: the record page gets its own
+  skeleton (title row, tabs, the card's pills and field grid), a table inside a section gets header + row bars.
 - **Short facts together, long blocks across the whole row.** In a two-column details grid the short values (ids,
   names, dates, statuses) sit together first; anything long (a JSON payload, an exception and its stack trace, notes,
   a message body) takes the full row (`md:col-span-2`), all such blocks in the same box, a very long one scrolling in
@@ -322,6 +372,13 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   changed" style event per aggregate, and every screen showing derived data listens.
 - Status changes that take time (an email queued → sent → failed) broadcast each step, the first one at the request.
 - Disconnect Echo on sign-out (or the user lingers in presence lists).
+- **Presence, three traps (Alpha, 12 Nov 2026):** mount the presence provider once at the root inside the auth
+  context (it waits for a confirmed session), not in the portal layouts: pages outside them (an investor's
+  `/select-account`) counted as offline. **A sign-out must end every tab** of that browser (a `BroadcastChannel`
+  posted from the same object that listens, so a tab never hears itself): another open tab's socket kept the person
+  online. And a PrimeReact table with `cellMemo` (on by default in our wrapper) redraws a cell only when its row
+  changes, so an Online/Offline pill froze: `cellMemo={false}` on tables whose cells read live state. Test it with
+  two browser contexts: one watches the list, the other signs in with two tabs and signs out of one.
 - Servers: Reverb under Supervisor with `stopwaitsecs=10` (workers 3600), proxied by nginx; restart it with the
   workers on deploy.
 
@@ -380,6 +437,13 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   `unrouteAll({ behavior: "ignoreErrors" })`. Expect "drawn by the server" for pages that read `searchParams`
   (dynamic) and "arrived at once" for pages prefetched whole: both are fine, an empty page area is not. Stopping a
   background `next start` via the task leaves the node process holding the port: stop it by its command line.
+  **A local `next build` reads `.env.production`, the LIVE server's values**: the build would call the live API.
+  Load the development values over it for the build and the server (`set -a; . ./.env.development; set +a`; shell
+  variables beat env files), never edit the file. The local API's CORS list names only the dev port, so pages on
+  :3001 load no profile and every staff page says "no access": answer CORS for :3001 inside the spec
+  (`page.route` the API, `route.fetch()`, fulfil with the response plus `access-control-allow-origin`, swallow the
+  error of a call still pending when the test ends), in a helper that does nothing on :3000 (Alpha
+  `e2e/helpers/productionBuild.ts`).
 - **The same e2e setup in every project** (Alpha, Letshego and NICE agree; copy it, do not invent): Playwright against
   the running `composer dev` + `npm run dev`, one worker, 180 s per test (first visits compile), projects per role
   with a setup project minting sessions through tinker and a teardown revoking them, `npm run e2e` / `e2e:ui`,
@@ -423,6 +487,11 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   card's periods (`Carbon::setTestNow` + the bindings it sends). Assert most routes built a query, or the
   guard can pass by reaching nothing.
 - **Prove every new test by putting the old code back** (copy the file aside, revert the hunk, run, restore).
+  After restoring, `curl` the page: `next dev`'s watcher can miss a file copied back and keep serving the old
+  version (Alpha, 12/11/2026: six specs failed on a fixed layout); a real content edit makes it recompile.
+- **A crash on purpose, without test code in the app:** answer one API call with the wrong shape
+  (`page.route(..., route.fulfill({ json: { data: { not: "a list" } } }))`) and assert the error panel inside the
+  frame, then that its way out works.
 - Test the calendar edges: the 31st, 1 January, the first day of the financial year, 29 February.
 
 ## 15. Documentation the repo keeps

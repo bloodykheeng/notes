@@ -73,9 +73,8 @@ Frontend values, same key and public host:
 - Next.js app, in its own `.env.production`:
 
   ```env
-  NEXT_PUBLIC_REVERB_APP_ID=<same>
+  # The key only: never the app id or secret in a NEXT_PUBLIC_ value (it ships to every browser).
   NEXT_PUBLIC_REVERB_APP_KEY=<same>
-  NEXT_PUBLIC_REVERB_APP_SECRET=<same>
   NEXT_PUBLIC_REVERB_HOST="api.example.com"
   NEXT_PUBLIC_REVERB_PORT=443
   NEXT_PUBLIC_REVERB_SCHEME=https

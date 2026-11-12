@@ -263,13 +263,17 @@ NEXT_PUBLIC_API_BASE_URL=https://testapi.example.com/api
 NEXTAUTH_URL=https://test.example.com
 NEXTAUTH_SECRET=<npx auth secret>
 
-NEXT_PUBLIC_REVERB_APP_ID=<same as the API .env>
+# Only the key: the browser needs key, host, port and scheme. NEVER the app id or secret here:
+# every NEXT_PUBLIC_ value is compiled into the JavaScript each visitor downloads.
 NEXT_PUBLIC_REVERB_APP_KEY=<same as the API .env>
-NEXT_PUBLIC_REVERB_APP_SECRET=<same as the API .env>
 NEXT_PUBLIC_REVERB_HOST="testapi.example.com"
 NEXT_PUBLIC_REVERB_PORT=443
 NEXT_PUBLIC_REVERB_SCHEME=https
 ```
+
+The API also needs the Google client id (same value as the Next.js one, no secret) if sign-in with Google is on:
+`GOOGLE_CLIENT_ID=` in the API `.env` (`nextjs/firebase-messaging-sw-and-nextauth-google.md` section 2).
+`NEXTAUTH_URL` is this site's own frontend host; the API host there gives Google `redirect_uri_mismatch`.
 
 ```bash
 npm ci

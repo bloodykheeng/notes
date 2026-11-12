@@ -139,6 +139,12 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   Preview -> Applied between two polls and the page never saw "Applying". Read with `setReadDataOnly(true)`.
   A sheet bounded small by its nature (one row per subcategory) can stay in the request; say why.
 
+- **A business refusal is not an error: the exception implements `ShouldntReport`.** A rule doing its job (a check-in
+  outside the radius, a closed visit) still answers 422 with its message, but must not reach `laravel.log` as an ERROR
+  with a stack trace: NICE logged every refused check-in that way (89 MB, real errors buried, 12/11/2026). Note
+  `report()` returning `false` does NOT stop it: Laravel then falls back to the default reporting. Test it with
+  `Exceptions::fake()` + `assertNotReported()`. And production runs `APP_DEBUG=false` with daily logs
+  (`LOG_STACK=daily`, `LOG_DAILY_DAYS=30`) from the first deploy.
 - **A closure only sees its `use` list.** A variable set outside and read inside a `function () use (...)` without
   being listed, or set inside and read after, is "Undefined variable" at run time only, and the editor reports it only
   for open files (NICE 12/11/2026: route bulk delete answered 500 for five days, `$routes` missing from the

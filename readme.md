@@ -14,6 +14,9 @@ Every note is written to be followed top to bottom and copy-pasted.
   before any deploy or redeploy. How we work (agent writes the commands, I run them and paste the output back),
   read-only checks first, loops over environments, paste-safe blocks, secrets, and the
   `docs/deployment.md` + `docs/redeployment.md` it must leave in the code repo.
+- **[ai-agents/deploy-yourself-over-ssh.md](ai-agents/deploy-yourself-over-ssh.md)**: the other mode, when I put
+  the SSH login in a txt file and the agent runs the whole deploy itself (password helper, secrets moved file to
+  file, restoring from a hosting backup, DNS checks, clean-up).
 - **[nginx/laravel-nextjs-two-environments-deploy.md](nginx/laravel-nextjs-two-environments-deploy.md)**:
   full build of a fresh Ubuntu VPS for a Laravel API (queue workers, scheduler, Reverb) plus
   a Next.js frontend (pm2), two environments on one box, Nginx + Let's Encrypt. Includes the
@@ -35,6 +38,7 @@ Every note is written to be followed top to bottom and copy-pasted.
 | [audit-trail-with-snapshot-schemas.md](ai-agents/audit-trail-with-snapshot-schemas.md) | The audit trail engine from SDS and Alpha: what an entry must answer, `HasSnapshotSchema` on every model, `SnapshotPresenter` (values resolved and frozen at write time), the queued `LogActivityJob`, the module enum, the generic view dialog, the rules that make it trustworthy, how to upgrade an app that logs sentences, and what NICE's upgrade found (secrets in SMS entries, noise, dumps, broken calls) and the mistakes an agent made |
 | [enums-and-migrations.md](ai-agents/enums-and-migrations.md) | Every fixed list as a PHP enum cast on the model (strings in the database, values listed in the migration comment, web mirrors), reading and writing cast values, and migrations people can read (every column written out, grouped and spaced, explanations above, no date columns, edit in place only before a deploy), with the mistakes an agent made |
 | [deploy-with-an-ai-agent.md](ai-agents/deploy-with-an-ai-agent.md) | The playbook for an AI agent deploying a Laravel + Next.js project with me: study the repo first, read-only server checks, env files made locally (fresh secrets, never in git), rounds of short verified blocks, `for` loops over environments, nothing interactive mid-paste, backups and asking before destructive steps, stop-all/restart-all on small boxes, secrets never echoed, and writing `docs/deployment.md` + `docs/redeployment.md` (plus a handoff) into the repo |
+| [deploy-yourself-over-ssh.md](ai-agents/deploy-yourself-over-ssh.md) | When the agent has the SSH login (in a txt on my machine) and runs the deploy itself: folder layout, reading secrets without leaking them (masks, file-to-file), the `SSH_ASKPASS` password helper for Windows OpenSSH (and asking before installing a key), the order of work for restoring a site from a hosting backup (baked API URLs, `env()` vs `config:cache`, MariaDB dump's sandbox line, `tar --force-local`), DNS traps (no zone = REFUSED, Contabo's template MX, empty Name = root, RDAP for the registrar), Windows traps, clean-up and reporting (Elevate Pesa, Nov 2026) |
 
 ### security
 | Note | What it covers |
@@ -61,6 +65,7 @@ Every note is written to be followed top to bottom and copy-pasted.
 | Note | What it covers |
 | --- | --- |
 | [google-workspace-mail-firebase-oauth-recaptcha.md](integrations/google-workspace-mail-firebase-oauth-recaptcha.md) | Where every Google-side env value comes from: Workspace SMTP + App Password, Firebase config and service account, OAuth client, reCAPTCHA, and the walls (2SV, org policy, project quota) |
+| [free-email-with-maildog.md](integrations/free-email-with-maildog.md) | Free email for a client's domain: the options compared (MailDog, Brevo, Zoho free has no SMTP, forwarding, why not self-host FastPanel on the app's VPS), MailDog domain + the four DNS records on Contabo (empty Name = root, edit the template MX, one SPF), mailbox = SMTP login, the Laravel `.env` (quote a `#` password), the tinker test and port check, troubleshooting |
 
 ### nextjs
 | Note | What it covers |

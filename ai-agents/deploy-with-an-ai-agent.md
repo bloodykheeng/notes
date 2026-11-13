@@ -17,6 +17,9 @@ made on the way.
 - **You do not have the server. I do.** You write the commands; I run them over SSH and paste back everything the
   terminal printed. You read the output, decide, and write the next commands. Never claim something is done on the
   server until its output shows it.
+- **Unless I hand you the login.** When I say the SSH login is in a txt file, you run the deploy yourself: read
+  [deploy-yourself-over-ssh.md](deploy-yourself-over-ssh.md) for how (password helper, secrets file to file,
+  background installs, DNS checks, clean-up). Everything else in this playbook still applies.
 - **You do have the code.** The repos are on my machine in your workspace: read them yourself instead of asking me.
 - **Rounds.** Every round is: a few short blocks of commands → I paste the output → you report what it shows (good
   and bad) → the next blocks. Read-only checks first, changes after, a verification line after every change.
@@ -32,6 +35,8 @@ made on the way.
 
   Mail, Firebase, Google sign-in and reCAPTCHA values:
   [../integrations/google-workspace-mail-firebase-oauth-recaptcha.md](../integrations/google-workspace-mail-firebase-oauth-recaptcha.md).
+  A client with no paid email (app sending + an inbox for free):
+  [../integrations/free-email-with-maildog.md](../integrations/free-email-with-maildog.md).
 
 ---
 

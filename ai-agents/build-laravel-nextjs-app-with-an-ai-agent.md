@@ -288,6 +288,8 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **Filter words say what they do** ("Not dropped", not "Working"), and never reuse a word the same dialog already
   uses for something else ("Active" was the record status).
 - Deep links: `?open_<thing>_id=` opens a record's dialog (approvals link to records this way).
+- **Row buttons always in view**: the Actions column is pinned to the right (`frozen alignFrozen="right"`), its cell takes the row's colour, it is unpinned on phone cards, row tooltips open to the left, and columns nobody needs at a glance are `visible: false`. How and the CSS: [../nextjs/primereact-datatable-pinned-actions.md](../nextjs/primereact-datatable-pinned-actions.md).
+
 
 ## 8. Dialogs and forms
 

@@ -76,6 +76,7 @@ Every note is written to be followed top to bottom and copy-pasted.
 | [laravel-validation-error-toasts-without-duplicates.md](nextjs/laravel-validation-error-toasts-without-duplicates.md) | The same Laravel 422 error shown in two toasts: why (Laravel's `message` repeats the first field error) and the hook logic that shows each thing once |
 | [dashboard-sidebar-groups.md](nextjs/dashboard-sidebar-groups.md) | A dashboard sidebar people can scan: a few small headings, related pages folded under one parent, children on a guide line, one lit row, gates that drop empty parents and groups, the collapsed rail, and the Playwright check that the folded menu fits a laptop screen (SDS, GiftNest, NICE) |
 | [primereact-inputnumber-zod-form-traps.md](nextjs/primereact-inputnumber-zod-form-traps.md) | InputNumber `onChange` vs `onValueChange`, `min`/`max` that only clamp the screen, `z.coerce` and 0 defaults letting empty fields through, AutoComplete text vs a picked item; plus an audit grep |
+| [primereact-datatable-pinned-actions.md](nextjs/primereact-datatable-pinned-actions.md) | Row buttons always in view on a wide list: the Actions column frozen right, its cell inheriting the row's colour (striped, hovered) with a hairline, unpinned in the phone card layout, action tooltips on the left so the arrow points at the button, and fewer columns by default (Elevate Pesa) |
 
 ### linux
 | Note | What it covers |

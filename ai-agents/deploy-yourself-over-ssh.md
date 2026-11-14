@@ -94,8 +94,11 @@ chmod 700 "$SP/r.sh"
      config is cached). Elevate Pesa reads Firebase credentials that way: cache routes and views only.
    - the SQL dump's first line: a MariaDB 11 dump starts with `/*M!999999\- enable the sandbox mode */`, which the
      MySQL 8 client rejects. `tail -n +2` it before import.
-2. **Read-only server round** (OS, RAM, disk, ports, services, DNS of every hostname). A fresh box answers
-   "nothing installed" in one call.
+2. **Read-only server round** (OS, RAM, disk, ports, services, DNS of every hostname, **the timezone**). A fresh box
+   answers "nothing installed" in one call. `timedatectl`: Contabo's images default to **`Europe/Berlin`**, and MySQL
+   follows the OS, so a database moved from a UTC host reads every `TIMESTAMP` 1-2 hours late (Elevate Pesa, found
+   14/11/2026, after the import). Set the box to UTC before installing MySQL (`timedatectl set-timezone UTC`), and pin
+   the app's connection to UTC anyway (`dates-and-timezones-with-an-ai-agent.md`, trap 7).
 3. **Check DNS before you need it.** If the hostnames do not resolve, find out why now (section 5); the server
    work can go on while I fix DNS.
 4. **Install in the background** (`run_in_background`), and package uploads meanwhile:

@@ -53,11 +53,21 @@ timezone-free: leave them alone.
 5. **`new Date("2026-11-01")` in the browser is UTC midnight** (03:00 in Kampala): build
    `${day}T00:00:00+03:00` (and `T23:59:59.999` for an end).
 6. **Date pickers that snap on every change throw the chosen time away.** Snap only when the date changes.
-7. **MySQL `TIMESTAMP` columns are converted with the session timezone.** A machine whose MySQL runs on
-   Kampala time reads every `created_at` 3 hours late. Pin the session in config, not per server: Laravel's
-   mysql connection takes `'timezone' => '+00:00'`. Prove production already matches before you ship it: in
-   a production dump, compare a TIMESTAMP with a DATETIME written at the same moment (`created_at` against
-   `checkin_date`) under both session zones; equal under `+00:00` means production's session was UTC.
+7. **MySQL `TIMESTAMP` columns are converted with the session timezone**, on write and on read (`DATETIME` never is),
+   and the session zone defaults to the SERVER's. `app.timezone` / `APP_TIMEZONE` is PHP's clock only: Laravel sets the
+   session zone only when the connection has a `timezone` key (`MySqlConnector`). Written and read on one server a
+   `TIMESTAMP` round-trips whatever the zone; it goes wrong when the database **moves** to a server in another zone:
+   mysqldump keeps the stored UTC values (`--tz-utc`, on by default), and the new server reads them in ITS zone.
+   **The standard (the user's decision, 14/11/2026): pin every Laravel + MySQL connection to UTC**,
+   `'timezone' => env('DB_TIMEZONE', '+00:00')` on mysql and mariadb, so the server's zone never matters. Real case:
+   Elevate Pesa moved from Hostinger (UTC) to a Contabo VPS that runs **`Europe/Berlin`** (Contabo's default); the live
+   app read every moved row 1 hour late (winter rows) or 2 hours late (summer rows), while rows written on Contabo read
+   right, a mixed database. Berlin's summer time also makes MySQL reject some UTC writes in its spring-forward hour.
+   **Adding the pin to an existing project shifts the rows written under the old session zone**, so first check the
+   server (`timedatectl`; `select @@global.time_zone, @@system_time_zone`) and the data (a `DATETIME` written with
+   `created_at`, read under both zones), then move the rows written under a non-UTC zone in the same deploy. A server
+   already on UTC needs nothing. Laravel declined to make it the default ([laravel/laravel#6673](https://github.com/laravel/laravel/pull/6673),
+   closed unmerged in 2025), so each project sets it.
 8. **Not every business-time value is a bug.** Calendar-date columns must be compared with the business
    date. Converting them to UTC is the bug.
 9. **Caches outlive the fix.** Clear them on deploy.
@@ -158,8 +168,9 @@ timezone-free: leave them alone.
 8. **Uncast columns:** one script over every model: the `datetime`/`timestamp` columns from
    `information_schema.columns` that `$model->hasCast()` and `getDates()` do not cover. Each one goes to the
    browser without `Z` and shows 3 hours early (NICE: `failed_jobs.failed_at`, the queues screen).
-9. **The database session:** `select @@session.time_zone, @@system_time_zone`. Anything but UTC shifts every
-   TIMESTAMP column; pin it in the connection config (`'timezone' => '+00:00'`).
+9. **The database session:** through the app, `select @@session.time_zone` must say `+00:00` (the pin, trap 7). On
+   each server, `timedatectl` and `select @@global.time_zone, @@system_time_zone`: a non-UTC server means rows written
+   before the pin were stored in that zone; move them once when the pin first ships.
 10. **Tally, do not trust:** pin the clock to a day that has data (`Carbon::setTestNow`), call each dashboard
     figure and the list its link opens with the exact parameters the screen sends (a bare day in the link
     becomes `00:00:00.000` / `23:59:59.999` business time as ISO), and compare. Do it on the 1st, a middle day
@@ -228,6 +239,18 @@ Each of these cost a round of the user's time. They are about method, not dates.
     themselves". When a date reads wrong, check the rule first, then find the reader that breaks it; never bend the
     stored value to suit a broken reader.
 
+17. **Overstating trap 7.** A `TIMESTAMP` is converted on write AND read, so written and read under the same zone it
+    round-trips exactly, whatever the zone. The 3-hour error needs the write zone and the read zone to differ: a
+    production copy (UTC) on a laptop whose MySQL runs on Kampala time, or a server migration. The agent told the user
+    that Alpha and Letshego (no pin, laptop on Kampala time) "should read 3 hours late"; they were right and it was
+    wrong: Alpha's `notifications.start_date` (`DATETIME`, written with `created_at`) matched on all 136 rows under the
+    server's own zone and on none under `+00:00` (Elevate Pesa, 14/11/2026). Check with a `DATETIME` written at the
+    same moment, read-only, before claiming either way. Then the agent swung the other way and called the pin
+    "unnecessary" (the user removed it), until a read-only look at the production server showed Contabo on
+    Europe/Berlin and the live site 1 to 2 hours late on every moved row; the pin came back as the standard the same
+    day. Lesson: check the REAL servers (zone, one row read in both zones, a row created just now) before arguing for
+    or against a setting; the laptop alone proves neither.
+
 ## 6. Ship it with docs
 
 - The project's timezone guide: the rules, the column table, the helpers, the traps.
@@ -238,3 +261,6 @@ Each of these cost a round of the user's time. They are about method, not dates.
 
 NICE's versions: `nice-laravel-api-pase-two/docs/timezone-handling-guide.md` (sections 11 to 14),
 `docs/dates-and-times-for-the-mobile-app.md`, and the web's `nice-next-js-phase-two/docs/display-conventions.md`.
+Elevate Pesa's (applied 14/11/2026, a small app: 11 date columns): `pesa_back/docs/timezones.md` (rules, inventory,
+the MySQL session pin and the Contabo proof), the guard adapted to MySQL (`date(\`col\`)` instead of SQLite's `strftime`), and the web's
+`npm run check:dates` extended to Luxon's `DateTime.now()`.

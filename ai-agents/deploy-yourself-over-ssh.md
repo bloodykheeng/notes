@@ -163,6 +163,31 @@ live `.env` to `/root/` before replacing it.
 
 ---
 
+## 6b. Adding an app to a box that already runs another (Letshego on GiftNest's, 16 Nov 2026)
+
+- **Read the neighbour's deployment doc first** (its ports, pm2 names, Supervisor programs, crontab, certificate),
+  then confirm with `ss -ltnp`, `pm2 jlist`, `supervisorctl status`, `certbot certificates`. Pick the next free ports
+  (GiftNest had 3000/3001 and 8080/8081, so Letshego took 3002 and 8082) and name everything after the new domain.
+- **Touch nothing of the neighbour's**: its own `--cert-name` certificate for the new names (never `--expand` the
+  neighbour's), the crontab line **added** (`(crontab -u www-data -l | grep -vF "$D"; echo "$LINE") | crontab -u
+  www-data -`), `supervisorctl reread && update` (never `restart all`), `pm2 save` (pm2 startup already exists).
+- **Short on memory for `next build`?** Offer a swap file (`fallocate -l 4G /swapfile`, fstab, `vm.swappiness=10`)
+  instead of stopping a live neighbour: Letshego's build peaked at ~220 MB of swap with GiftNest's four apps up.
+- **Reuse what the box already has, server side**: the neighbour's GitLab key may already read your repos
+  (`git ls-remote` tells you); its mailbox can be copied into your `.env` on the server with a short Python that reads
+  one file and writes the other, printing only "8 keys filled".
+- **`ssh`/`git` inside a `bash -s` heredoc read the rest of your script from stdin**: the round stops silently half
+  way. End every nested call with `< /dev/null`.
+- **tinker as the web user:** `sudo -u www-data env HOME=/tmp php artisan tinker ...` (a `HOME=/tmp` before `sudo`
+  does not pass through).
+- **Prove the whole path from outside with a script**: CORS preflight, sign-in step 1 and 2 (a bypass code read from
+  the env file inside the script, never printed), a scoped list, logout; a WebSocket handshake with curl
+  (`Upgrade: websocket` → 101).
+- **Found a problem in the neighbour?** Write it a note (`<its workspace>/notes-for-<project>/`), do not fix it from
+  here (GiftNest: no MySQL UTC pin on a `Europe/London` box).
+
+---
+
 ## 7. What to report to me
 
 After each phase, a few lines in plain words: what was done, what the check printed (numbers: tables, rows, latest

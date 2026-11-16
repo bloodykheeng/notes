@@ -160,6 +160,7 @@ live `.env` to `/root/` before replacing it.
 | Backslashes vanish inside a quoted heredoc that writes Python | write the line with the Edit tool, or use `chr(92)` |
 | `gh` not installed, GitHub SSH key not accepted | push over HTTPS (the credential manager has the token) |
 | Long `du`/`grep` over a backup times out at 2 min | run it in the background, read the output file later |
+| `git push` to GitLab or GitHub hangs with no output (a network blip) | `timeout 90 git push ...` per repo and read `git status -sb` after; a chained `push && next step` stalls everything behind it |
 
 ---
 
@@ -178,6 +179,11 @@ live `.env` to `/root/` before replacing it.
   one file and writes the other, printing only "8 keys filled".
 - **`ssh`/`git` inside a `bash -s` heredoc read the rest of your script from stdin**: the round stops silently half
   way. End every nested call with `< /dev/null`.
+- **`pm2` over a non-interactive ssh call is "not found"** when Node came from nvm: `source ~/.nvm/nvm.sh` first in
+  the same call (and `pm2 describe <name>` beats parsing `pm2 jlist`, which prints nothing without nvm).
+- **Rebuilding demo data with `migrate:fresh` logs "Table 'cache' doesn't exist"** for the seconds the tables are
+  gone: the worker and Reverb poll the cache. Restart them right after and count errors only from after the restart
+  (Letshego: three lines at the rebuild, none after).
 - **tinker as the web user:** `sudo -u www-data env HOME=/tmp php artisan tinker ...` (a `HOME=/tmp` before `sudo`
   does not pass through).
 - **Prove the whole path from outside with a script**: CORS preflight, sign-in step 1 and 2 (a bypass code read from

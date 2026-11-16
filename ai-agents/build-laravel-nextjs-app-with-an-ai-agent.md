@@ -279,6 +279,15 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   `suppressHydrationWarning` does nothing for that. For a single-language app turn translation off
   (`<html translate="no">` + `<meta name="google" content="notranslate">`; a translator can also garble figures),
   and let the error panel recognise a `NotFoundError` and say "turn off translation for this site".
+  **Why this is a Next.js problem too:** Next draws with React, and React has no fix (facebook/react#11538, open
+  since 2017; Vercel's forum has the same crash on Next with Chrome's "Always translate"). Worse than the crash: React
+  updates the original text node, not the translated copy, so a translated page can keep showing **old figures** after
+  a filter or a live update, with no error. The workarounds (wrap text in `<span>`, patch `Node.prototype.removeChild`
+  to swallow the error) stop the crash but not the stale text, and the patch hides real bugs.
+  **When people need another language, translate in the app, never through the browser:** `next-intl` (the first
+  library in Next's own guide, `node_modules/next/dist/docs/01-app/02-guides/internationalization.md`): our own
+  Luganda/Swahili strings, a language switch, figures and names untouched. Letshego settled this with me on
+  16/11/2026: translation stays off, next-intl if Letshego ever asks.
 - **Never put a secret in a `NEXT_PUBLIC_` variable**: any one the code reads is compiled into the JavaScript every
   visitor downloads. A Reverb client needs only the app KEY, host, port and scheme; the app SECRET stays on the API.
   Alpha's web env files carried `NEXT_PUBLIC_REVERB_APP_SECRET` (12/11/2026): no code read it, so it was never

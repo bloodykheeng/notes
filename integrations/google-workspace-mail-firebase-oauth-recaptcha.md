@@ -171,6 +171,37 @@ RECAPTCHA_SECRET_KEY=<secret key>
 
 ---
 
+## 4b. A new domain goes live: how the agent guides me (proved on Letshego, 16 Nov 2026)
+
+The console steps are mine (the agent has no Google login); the server side is the agent's. Do it in this order so a
+missing domain never locks anyone out:
+
+1. **Deploy with the reCAPTCHA secret blank** on the API (the check is skipped) and the site key in the web build.
+   Google sign-in can be built on: a missing origin only breaks the Google button, not the password sign-in.
+2. **Give me direct links with the project in them**, one numbered block per place, each with the exact text to
+   paste and the button to press. Not "go to the console". With `<id>` the project id (`letshego-field-sales-test`):
+
+   | Place | Link | What to add |
+   | --- | --- | --- |
+   | OAuth client | `https://console.cloud.google.com/auth/clients?project=<id>` → the web client | *Authorized JavaScript origins*: `https://<web domain>`; *Authorized redirect URIs*: `https://<web domain>/api/auth/callback/google` (NextAuth); **Save** |
+   | Branding | `https://console.cloud.google.com/auth/branding?project=<id>` | *Authorized domains*: the root domain (`nwtdemos.com`); **Save** (Google also adds an origin's domain here by itself) |
+   | Audience | `https://console.cloud.google.com/auth/audience?project=<id>` | while **Testing**: each tester's Google email under *Test users* (else `access_denied`) |
+   | reCAPTCHA | `https://www.google.com/recaptcha/admin` → pick the site at the top → ⚙ | *Domains*: `<web domain>` (subdomains of a listed root are covered); **Save** |
+
+   With several Google accounts in the browser, the `authuser=N` (or `/u/N/`) in the link picks the account: check the
+   avatar and the project picker before saving. Changes take 5 minutes to a few hours.
+3. **I send screenshots; the agent reads them** (the URIs saved, the domain listed, the "saved" toast) before going on.
+4. **Then the agent turns the secret on, file to file**: the secret is already in the local `.env` (commented under
+   the blank line) or in the env folder; a short script puts it in the server `.env` and prints only its length;
+   back up the `.env` first, then `php artisan optimize` and restart the workers.
+5. **Prove it from outside:** a sign-in POST with no reCAPTCHA token must now be refused (Letshego: 422 "We could
+   not confirm this is a person signing in"); then I sign in through the browser, which must work. If it fails with
+   the domain listed, blank the secret again and `optimize` (sign-in works at once), then look.
+6. **Docs:** the deployment doc's environment table (reCAPTCHA checked: on), the open items, the env file copy on the
+   deploying machine updated to match the server.
+
+---
+
 ## 5. Handing projects to the client later
 
 No env change, only ownership:

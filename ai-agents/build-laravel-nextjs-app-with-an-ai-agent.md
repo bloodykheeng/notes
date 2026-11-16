@@ -440,6 +440,20 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   the other period's dates and figure, the change in its colour. A positioning tooltip that flips at the screen's
   edge (PrimeReact `Tooltip` with the card tokens, not its dark default), an `aria-label` that says the same, and
   it **stays while the pointer is on it** (`autoHide={false}`) so the figures can be copied.
+- **Records that cover a period (plans, targets) get Active / Inactive AND a lifecycle rule** (Letshego, 16/11/2026,
+  my "mixture of both"): Inactive stops one (not worked, frees what it held, out of "running" figures and of who is
+  behind) but keeps it in the reports; delete only when Inactive **and not started** (a mistake); a started one is
+  never deleted. "Current" means not over and Active. The refusal for a started one says so at once ("has started,
+  so it is kept for the reports. Make it Inactive to stop it"), not "make it Inactive first", which would only refuse
+  again.
+- **A refused delete names what keeps the record** ("Mary has a loan request, so they are kept. Leave them
+  Inactive."): check the referencing tables in the model's `deleting` hook before the foreign key refuses with a
+  generic message.
+- **Ticking rows: one selection, each action checks itself** (Letshego Users, after Elevate Pesa): when a list has
+  more than Delete (Message, Delete), tick anyone in reach; Message goes to the ticked (or "Message everyone" with
+  none); Delete with an Active row ticked warns and sends nothing. A list whose only bulk action is Delete ticks only
+  the rows Delete can take, a greyed box saying why. Messaging people reuses the announcement form (one engine, a
+  record of who read it), with the channels as ticks: bell always, push (on by default), email, SMS.
 - **No browser `title=` tooltips anywhere: one hover layer, Material style** (Letshego `HintLayer`, 16/11/2026): any
   element with `data-hint="..."` shows a small dark-grey label on hover and keyboard focus, placed and kept inside the
   screen by one document listener (event delegation, so table rows drawn later get it). PrimeReact's own tooltips get

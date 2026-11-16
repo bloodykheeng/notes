@@ -91,6 +91,7 @@ Each of these was proposed, argued briefly, settled by me, and recorded in `deci
 | A report card with no way to the rows | "We need some links, i.e. to visits" | Every figure, chart or quote opens its rows |
 | Browser tests failing on a database seeded two weeks earlier | (data aged) | Seeded "yesterday" data ages: reseed before blaming code; specs search by full name, not a common first name |
 | Ran `migrate:fresh` while Reverb was running | Presence stopped working | Reverb polls the cache table: restart it (and the queue worker) after a rebuild |
+| Reran a failing browser test in a loop, output cut by grep/tail, and called it "timing" | "Stop rerunning, find the root cause" (with ChatGPT's review) | Read error-context, then measure (DOM samples, request timings) before any change; the causes were six orphaned `composer dev` stacks, OPcache off (352 ms against 32), reCAPTCHA still fetched in every local sign-in, and `MAIL_HOST=localhost` costing 2 s per code email (build playbook §14, §16) |
 
 ## 5. Patterns worth reusing (where they live in Letshego)
 

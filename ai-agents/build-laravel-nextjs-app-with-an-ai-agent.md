@@ -517,6 +517,18 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   at link"), no API 5xx, no hydration / next/image / "script tag" warning. Add each warning you fix to its list.
 - **No `waitForTimeout` to wait for the app** (Alpha's rule): wait for the thing (`toBeVisible`, `waitForResponse`,
   skeletons gone). An exception says why on its line (an animation before a screenshot; a cached prefetch sends nothing).
+- **A failing test is diagnosed, not rerun** (Letshego, 16/11/2026: the agent reran a test in a loop, cut the output
+  with `grep | tail` and called it "timing" until I stopped it). Read `test-results/<test>/error-context.md` and the
+  screenshot, then MEASURE before changing anything: a throwaway probe spec that samples the DOM every 250 ms after
+  the step (`scrollTop/scrollHeight`, a row count), and `page.on("requestfinished", r => r.timing())` to time every
+  API call. Run the one test by line (`file.spec.ts:149`), then its neighbours. No rerun loops, no longer timeouts,
+  no `waitForTimeout`, nothing called flaky or "cold server" without numbers. That probe found the real cause in two
+  runs: a reload's last data landed at 24 s because the local API answered one call at a time (§16), so the 8 s
+  scroll restore gave up. The product limit stayed; the machine was fixed.
+- **Before calling a test wrong, check what the app promised.** A second opinion (ChatGPT) said the reload test
+  "demands scroll restoration the app doesn't promise"; `docs/decisions.md` showed I asked for it on 25/10/2026 and
+  `docs/scroll-memory.md` documents it. The decisions log settles whether an assertion is a requirement; an outside
+  reviewer cannot see it, so quote it back.
 - **One run at a time:** each run's teardown revokes its sessions, so a second run started meanwhile signs the first
   out half way. Start the full suite in the background, keep working on docs, rerun failures after it ends.
 - **Tell the person what a background process is before it runs, and why** ("a production build on 3001 beside your
@@ -567,5 +579,40 @@ test). The in-app user manual is updated with every user-visible change. Session
 ## 16. Running it
 
 Local (never on a server): `php artisan serve`, `php artisan reverb:start --debug`, `php artisan queue:work`,
-`php artisan schedule:work`, `npm run dev`. Servers: Supervisor (workers, Reverb), cron's `schedule:run` every minute,
+`php artisan schedule:work`, `npm run dev`.
+
+**Local speed on Windows (Laragon), checked when pages feel slow or e2e loads time out** (Letshego, 16/11/2026):
+
+- **PHP's built-in server (`php artisan serve`, `composer dev`) answers one request at a time on Windows**
+  (`PHP_CLI_SERVER_WORKERS` is Linux/macOS only). A dashboard page firing 8 to 10 calls waits for them in a line.
+  Servers (nginx + PHP-FPM) are not affected. If a page is still slow after the two fixes below, serve the API through
+  Laragon's nginx/Apache instead.
+- **Turn OPcache on for the CLI**, since that is what the built-in server runs: Laragon menu › PHP › Extensions ›
+  `opcache` (writes `zend_extension=opcache`), and in php.ini `[opcache]` set `opcache.enable=1` and
+  `opcache.enable_cli=1`. Save the file in the editor (an unsaved Notepad++ tab changes nothing), restart the stack,
+  check `php -r 'var_dump(extension_loaded("Zend OPcache"), ini_get("opcache.enable_cli"));'`.
+- **Never more than one `composer dev`.** Stopping an agent's background `composer dev` kills only its shell:
+  `concurrently` and its `cmd` children (serve, `queue:listen`, `schedule:work`, `reverb:start`) keep running and
+  restart each other. On Letshego six whole stacks had piled up (six servers on :8000, six queue listeners booting
+  Laravel every 3 s, six schedulers), so `/up` took 0.7 to 1 s. After stopping them all and starting one, with
+  OPcache: 50 to 120 ms (it was 300 to 450 ms with one stack and no OPcache), and the failing spec passed in 32 s
+  instead of timing out. **OPcache alone, measured cleanly** (one spare `php -S` on another port, started from
+  `public/` as `artisan serve` does, OPcache loaded only by `-d zend_extension=opcache -d opcache.enable_cli=1`):
+  `/up` 352 ms without, 32 ms with. **The trap that fooled the agent first:** comparing `-d opcache.enable_cli=0`
+  against `=1` while php.ini still loads the extension showed no difference, and it wrongly told me to revert php.ini;
+  start the router from `public/` too, or every request is an error page answering in 3 ms.
+- **`MAIL_HOST=127.0.0.1`, never `localhost`, on Windows**: localhost tries IPv6 (::1) first; Mailpit and most local
+  servers listen on IPv4, and Windows retries the refused connection for about 2 s before falling back. Every OTP
+  email (sent synchronously) cost 2,024 ms against 1 ms. Same for `DB_HOST`, Redis, anything local.
+- **reCAPTCHA off locally means both halves blank**: the API's secret AND the web's site key. With only the secret
+  blank, the browser still loaded Google's script and fetched a token on every sign-in (4 s, over 20 s on a slow
+  line), and the e2e sign-ins timed out at random. Check and stop them all:
+
+  ```powershell
+  # what is running (expect one of each)
+  Get-CimInstance Win32_Process -Filter "Name='php.exe'" | Select ProcessId, CommandLine
+  # stop every stack: the shells first (they respawn children), then PHP (keeps the editor's PHP language server)
+  Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" | ? { $_.CommandLine -match 'artisan|php' } | % { taskkill /PID $_.ProcessId /T /F }
+  Get-CimInstance Win32_Process -Filter "Name='php.exe'" | ? { $_.CommandLine -notmatch 'language-server' } | % { Stop-Process -Id $_.ProcessId -Force }
+  ``` Servers: Supervisor (workers, Reverb), cron's `schedule:run` every minute,
 pm2 (Next.js), nginx; deploy and patch through the sibling playbooks.

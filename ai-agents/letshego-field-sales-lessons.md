@@ -130,6 +130,6 @@ API (`letshego-laravel`):
 - **Take the other projects' notes, check them, mark them** (16 Nov 2026): Alpha, Elevate Pesa and NICE left
   `notes-for-letshego` files (a reused client number, the MySQL session on +3, no crash screen, a sign-out that left
   other tabs online, a frozen Online pill). Each was checked on Letshego's code before fixing, each got a test, and
-  each note was marked Resolved with the date, commit and tests. The same pass found `docs/codes-and-identifiers.md`
+  each note was marked Resolved with the date, commit and tests. The same pass found `docs/database/codes-and-identifiers.md`
   was SDS's document copied whole, describing codes Letshego never had: **a doc copied from a sibling is read and
   rewritten for this system, never left as it came.**

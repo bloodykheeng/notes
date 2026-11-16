@@ -434,6 +434,11 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   list's own filters so the list counts exactly the same rows; add the API filter when it is missing (paid out,
   approved, rejected, withdrawn, dropped in these days). The arrows are **quiet**: shown on hover or keyboard focus,
   always on touch screens ("too many arrows, people lose concentration", 10/11/2026).
+- **A figure's change explains itself in a hover card, never a bare `title=`** (NICE's dashboard hovers; Letshego
+  `ChangeBadge`, 16/11/2026, "ours are weak"): on hover and keyboard focus, the period in words, what it is
+  compared with ("Against the 16 days just before"), this period's figure in full (`UGX 133,912,000`, not `133.9M`),
+  the other period's dates and figure, the change in its colour. A positioning tooltip that flips at the screen's
+  edge (PrimeReact `Tooltip` with the card tokens, not its dark default), an `aria-label` that says the same.
 - **A report shows the records behind its figures** (the loans with their clients, switchable by what was counted),
   as the standard table with its own Export, beside the charts and the page's Export and print.
 - A chosen period shows as chosen when the dialog reopens (Pick days highlights the matching quick pick); legends

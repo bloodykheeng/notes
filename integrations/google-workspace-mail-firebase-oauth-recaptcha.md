@@ -171,6 +171,27 @@ RECAPTCHA_SECRET_KEY=<secret key>
 
 ---
 
+## 4a. A mobile app too: Firebase App Check, the app's reCAPTCHA (Letshego, 28 Oct 2026)
+
+reCAPTCHA v3 tokens come only from a web page, so a Flutter/Android app can never pass it: once the server has a
+reCAPTCHA secret (test, production) the app's sign-in is refused. The app proves itself with **Firebase App Check**
+instead (Play Integrity: the genuine app on a genuine device), in the same Firebase project as push, so no new keys.
+
+- **API: one gate for both clients** (Letshego `app/Services/BotCheck.php`): an `X-Firebase-AppCheck` header, when
+  sent and Firebase is configured, decides (`AppCheckVerifier`, kreait/firebase-php `createAppCheck()->verifyToken()`
+  with the push service account); otherwise reCAPTCHA decides (`recaptcha_token` in the body). Put it on every
+  signed-out route that emails something: sign-in and the reset code.
+- **Firebase console:** App Check › Apps › the Android app › Play Integrity (with the app's SHA-256 fingerprints;
+  link the Play Console app when it exists). For development builds the app uses the **debug provider**: it logs a
+  debug token once; the project owner adds it under the app's ⋮ › *Manage debug tokens* (one per device/emulator).
+- **App:** `firebase_app_check`, `AndroidProvider.debug` in debug, `playIntegrity` in release; a dio interceptor
+  sends the token on every `auth/*` call, forgot password included. Never send a reCAPTCHA token from the app.
+- **The trap:** on a developer machine the reCAPTCHA secret is blank, so the fallback passes and an app with no App
+  Check works locally, then gets 422 on test the moment the secret is set (Letshego, 16 Nov 2026). Read the nginx log
+  (`Dart/` user agent → 422) and the audit trail (no `app_check_failed` = no token sent at all) before guessing keys.
+
+---
+
 ## 4b. A new domain goes live: how the agent guides me (proved on Letshego, 16 Nov 2026)
 
 The console steps are mine (the agent has no Google login); the server side is the agent's. Do it in this order so a

@@ -458,7 +458,13 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   element with `data-hint="..."` shows a small dark-grey label on hover and keyboard focus, placed and kept inside the
   screen by one document listener (event delegation, so table rows drawn later get it). PrimeReact's own tooltips get
   the same look in the global CSS. Trap: a PrimeReact `Tooltip` aimed at a CSS selector binds only to elements on the
-  page when it mounts; mounted under a loading skeleton it never shows. Mount it after the rows and key it to them.
+  page when it mounts; mounted under a loading skeleton it never shows, and even mounted after the rows it misses the
+  pointer moving straight from one target to the next (down a column of greyed checkboxes). Put `data-hint` on the
+  cells instead (set after each draw) and let the one hover layer follow the pointer.
+- **A shortcut gets its own small form, not the big one** ("an axe, not a bulldozer"): messaging ticked users is a
+  short dialog (who, title, message, channels with counts, Send) that posts to the same announcement API.
+- **Live counts are a coloured pill where the eye goes** (beside Filters, a glowing dot, clickable to filter), never a
+  number at the end of a subtitle.
 - **A report shows the records behind its figures** (the loans with their clients, switchable by what was counted),
   as the standard table with its own Export, beside the charts and the page's Export and print.
 - A chosen period shows as chosen when the dialog reopens (Pick days highlights the matching quick pick); legends

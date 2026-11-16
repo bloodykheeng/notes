@@ -438,7 +438,13 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   `ChangeBadge`, 16/11/2026, "ours are weak"): on hover and keyboard focus, the period in words, what it is
   compared with ("Against the 16 days just before"), this period's figure in full (`UGX 133,912,000`, not `133.9M`),
   the other period's dates and figure, the change in its colour. A positioning tooltip that flips at the screen's
-  edge (PrimeReact `Tooltip` with the card tokens, not its dark default), an `aria-label` that says the same.
+  edge (PrimeReact `Tooltip` with the card tokens, not its dark default), an `aria-label` that says the same, and
+  it **stays while the pointer is on it** (`autoHide={false}`) so the figures can be copied.
+- **No browser `title=` tooltips anywhere: one hover layer, Material style** (Letshego `HintLayer`, 16/11/2026): any
+  element with `data-hint="..."` shows a small dark-grey label on hover and keyboard focus, placed and kept inside the
+  screen by one document listener (event delegation, so table rows drawn later get it). PrimeReact's own tooltips get
+  the same look in the global CSS. Trap: a PrimeReact `Tooltip` aimed at a CSS selector binds only to elements on the
+  page when it mounts; mounted under a loading skeleton it never shows. Mount it after the rows and key it to them.
 - **A report shows the records behind its figures** (the loans with their clients, switchable by what was counted),
   as the standard table with its own Export, beside the charts and the page's Export and print.
 - A chosen period shows as chosen when the dialog reopens (Pick days highlights the matching quick pick); legends

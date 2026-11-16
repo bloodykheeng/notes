@@ -291,11 +291,20 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **Row buttons always in view**: the Actions column is pinned to the right (`frozen alignFrozen="right"`), its cell takes the row's colour, it is unpinned on phone cards, row tooltips open to the left, and columns nobody needs at a glance are `visible: false`. How and the CSS: [../nextjs/primereact-datatable-pinned-actions.md](../nextjs/primereact-datatable-pinned-actions.md).
 
 
+- **Every paging table says how many records there are** ("Showing 1 to 5 of 755 records"): one shared constant
+  (`paginatorTemplate` + `currentPageReportTemplate`) used by the standard table AND every raw `<DataTable paginator>`;
+  NICE's upload preview and four other raw tables showed page numbers with no total (16/11/2026). Grep for raw
+  DataTables with `paginator` and no report template when adding one.
+
 ## 8. Dialogs and forms
 
 - **Record dialogs** use one hook (`useRecordDialog`): closing hides the dialog and keeps the record, so the content
   does not vanish mid-fade. Never null the record in `onHide`.
 - **Details dialogs are calm**: a label/value grid, no hero stat boxes. Maximizable; sized for their content.
+- **A dialog whose record is gone says so.** When its own record answers 404 (deleted, or replaced: NICE keeps only
+  the uploader's latest preview, so a second upload deleted the one open in another tab), show "This ... is no longer
+  there" and what to do, never empty pages or a dead download; and the API answers a missing model with a sentence
+  (render `ModelNotFoundException` in `bootstrap/app.php`), never "No query results for model [App\Models\...] 3".
   Build them on one shared piece (Alpha's `components/common/RecordDetails.tsx`: `DetailsDialog` with the one status
   badge in the title, `DetailSection`, `DetailField`, `RecordAuditSection`) so a copied template cannot drift: Alpha
   had 14 dialogs copied from one old file with blue icons, the raw `#ULID` shown and two label styles.
@@ -357,6 +366,17 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **New UI copies the nearest existing component's look**, light and dark: a hand-made hover next to
   Highcharts ones must look like them (white, thin grey border, dark text in light mode). Check light mode
   as well as dark before calling it done.
+
+- **Upload problems are written for the person fixing the sheet**: "Kind: what is wrong. What to do" ("Duplicate:
+  this customer (CU...) is already on row 3 for this staff member (NS...). Keep one row per customer: tick all its visit
+  days on that row, then delete this row"), and the upload dialog carries a guide: every problem with a small before /
+  after table and the Excel steps (sort, filter), colour-coded like the counts, in a help panel with a max height that
+  scrolls (never one paragraph, never covering the page). The user decides whether the system fixes a bad sheet or
+  flags it; on NICE it flags (16/11/2026: "let them clean their sheet").
+- **Read spreadsheets with the values Excel saved, never recalculating**: PhpSpreadsheet `toArray(null, true, ...)`
+  recalculates every formula; a sheet of lookups ran a queued read past 15 minutes on NICE production. Read with
+  `calculateFormulas: false` and take each formula cell's `getOldCalculatedValue()`, calculating only a formula saved
+  without a value. Prove it by editing the lookup sheet inside the saved file (the saved values must still win).
 
 ## 10. Audit trail
 

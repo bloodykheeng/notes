@@ -387,6 +387,11 @@ adb shell su -c 'kill $(pidof com.android.systemui)'   # SystemUI restarts at on
   `cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural`.
 - **Don't** use `pkill -f com.android.systemui` inside `adb shell '...'`: `-f` matches the shell's own command line and kills it.
 - Undo: `settings put global navigation_bar_gesture_hint 1`, then restart SystemUI again.
+- **On-phone toggle, no PC:** Magisk module `gesture_hint_toggle` with an `action.sh` (Magisk 28+ shows an
+  **Action (▶) button** on the module in the Magisk app and runs it as root). The script flips
+  `navigation_bar_gesture_hint` 0/1, prints SHOWN/HIDDEN, then `kill $(pidof com.android.systemui)`. It refuses if
+  `navigation_mode` is not 2. Tip: after `magisk --install-module`, also copy `action.sh` into
+  `/data/adb/modules/<id>/` so the button works before the next reboot.
 
 ---
 

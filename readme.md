@@ -111,6 +111,11 @@ Every note is written to be followed top to bottom and copy-pasted.
 | [update-procedure.md](clodex/update-procedure.md) | Checking that the extension, CLI and clodex versions match, and updating both the VS Code extension and the terminal CLI (stop the proxy → update → patch → rebuild the launcher → start the proxy → reload) |
 | [troubleshooting.md](clodex/troubleshooting.md) | `EBUSY`/`EPERM` on install, missing models, `encrypted content could not be verified` |
 
+### android
+| Note | What it covers |
+| --- | --- |
+| [samsung-s10-custom-rom-yurom.md](android/samsung-s10-custom-rom-yurom.md) | Galaxy S10 (SM-G973F) from ExtremeROM to YuROM Ultra (Android 17): official TWRP bootloop, the installer's busybox and exact-vendor-size checks patched (hash chain rebuilt), f2fs to ext4 data, installing and verifying over adb, the 5-6 restart first boot, Magisk root, a custom first-screen logo in `up_param`, why the QMG boot animation is mis-scaled, and a Magisk module that clears `/data/apex/active` after 3 failed boots |
+
 ### claude-code
 | Note | What it covers |
 | --- | --- |

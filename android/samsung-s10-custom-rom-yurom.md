@@ -323,12 +323,42 @@ Tap is registered (`SystemUIAnalytics ... MobileData, icon tap`), nothing else h
    `DDS change success, PhoneId : 0` then `notifyPreferredDataSubIdChanged to -1`, `mPreferredDataSubId=-1`.
    Samsung's `PhoneSwitcherForMultiSim` maps phone 0 to subId -1 when publishing (single SIM in a DSDS model).
    An airplane-mode cycle does not fix it.
-Workaround: long-press the tile, or use Settings. Reported to the ROM dev.
+**Fixed with a root workaround** (Magisk module `data_tile_fix`): tell the registry the real value through the
+same binder call the phone service should make. On this build `ITelephonyRegistry.notifyActiveDataSubIdChanged`
+is transaction **30** (read from `TRANSACTION_notifyActiveDataSubIdChanged` in framework.jar's dex static values):
+```sh
+su -c 'service call telephony.registry 30 i32 1'   # 1 = settings get global multi_sim_data_call
+dumpsys telephony.registry | grep mActiveDataSubId  # -> 1, SystemUI: "Current active data subId=1", tile works
+```
+`service.sh` waits for boot_completed, **only runs if `ro.build.display.id` equals the tested build** (transaction
+numbers change between builds), then every 30 s re-publishes `multi_sim_data_call` whenever the registry
+disagrees (airplane mode makes PhoneSwitcher publish -1 again). It gives up after 3 failed sets.
+Log: `/data/adb/data_tile_fix.log` (`active data sub -1 -> 1` after each boot).
 
 **Reading compiled code without a decompiler** (jadx download was blocked): a ~100-line Python dex walker that,
 per method of a class, lists `invoke-*` targets, field refs and `const-string`s (instruction widths by opcode,
 skipping switch/array payloads). That was enough to see the null-check-and-return in `handleClick`.
 Script: `dexcalls.py` (kept with the S10 files).
+
+## Galaxy Store: "not compatible with your phone's operating system"
+
+Gallery's Photo Editor, Galaxy AI language packs / voice styles, Samsung Semantic Core all fail. The ROM ships
+these as **stubs** (e.g. `/system/priv-app/OfflineLanguageModel_stub/`) or not at all (Photo Editor,
+Samsung TTS `com.samsung.SMT`), and the real app comes from Galaxy Store, which matches on **model + API level**.
+The public update-check endpoint shows it:
+```
+https://vas.samsungapps.com/stub/stubUpdateCheck.as?appId=<pkg>&versionCode=0&deviceId=<model>&mcc=..&mnc=..&csc=..&sdkVer=<api>&pd=0
+```
+| deviceId / sdkVer | Photo Editor answer |
+| --- | --- |
+| SM-G973F / 37 (this phone) | resultCode 0 "Couldn't find your app which matches ... device, api level" |
+| SM-S938B / 37 | resultCode 2, 3.9.09.16 |
+| SM-G973F / 31 (real S10 firmware) | resultCode 2, 3.0.26.51 |
+
+The S10 officially ended at Android 12, so "S10 + Android 17" matches nothing. The offline language model is
+`resultCode 0 "Application is not approved as stub"` for every model (not delivered through the stub channel),
+so the ROM has to bundle the full app. Options: the ROM bundles the apps, or an APK the user gets from a
+trusted source is installed with `adb install`.
 
 ---
 
@@ -349,7 +379,9 @@ Script: `dexcalls.py` (kept with the S10 files).
 | No call recording, `ro.csc.sales_code` empty | optics/prism never mounted, props unset | vendor fstab entries + `omc_region_fix` module |
 | `SemCscFeature: files does not exist from null` | `mdc.system.path` unset | set it to `.../<CSC>/conf/system` |
 | `can't create /vendor/etc/...: Read-only file system` after remount | `/vendor/etc` is an overlayfs | write via a second mount of the vendor block device |
-| QS Mobile data tile does nothing | telephony publishes active data sub -1 | long-press / Settings; ROM bug |
+| QS Mobile data tile does nothing | telephony publishes active data sub -1 | `data_tile_fix` module (`service call telephony.registry 30 i32 1`) |
+| Galaxy Store "not compatible with your phone's operating system" | no store listing for S10 + Android 17 | bundle the app / install an APK |
+| Voice styles / language packs empty | stub app, Samsung TTS missing | ROM must bundle the full apps |
 | "Process system isn't responding" right after boot | heavy first minutes (load 15+) | tap Wait; only worry if it repeats |
 
 ## Lessons

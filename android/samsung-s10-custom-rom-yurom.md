@@ -375,6 +375,19 @@ The S10 officially ended at Android 12, so "S10 + Android 17" matches nothing. T
 so the ROM has to bundle the full app. Options: the ROM bundles the apps, or an APK the user gets from a
 trusted source is installed with `adb install`.
 
+## Hide the gesture hint (bottom pill)
+
+YuROM's Settings > Display > Navigation bar has no "Gesture hint" switch. The setting still works if SystemUI is restarted:
+```sh
+adb shell settings put global navigation_bar_gesture_hint 0
+adb shell su -c 'kill $(pidof com.android.systemui)'   # SystemUI restarts at once and the pill is gone (persists across reboots)
+```
+- **Don't** switch the overlay to `com.samsung.internal.systemui.navbar.gestural_no_hint` or `sec_gestural_no_hint`:
+  on this ROM the system rejects them and falls back to **three-button** (`navigation_mode=0`). Restore with
+  `cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural`.
+- **Don't** use `pkill -f com.android.systemui` inside `adb shell '...'`: `-f` matches the shell's own command line and kills it.
+- Undo: `settings put global navigation_bar_gesture_hint 1`, then restart SystemUI again.
+
 ---
 
 ## Troubleshooting table

@@ -215,8 +215,23 @@ adb shell logcat -d | grep '!@BootAnimation' | grep -E 'resolution|Load'
 ```
 
 Overlaying the loop with the main file via a Magisk module made it worse (MAIN is the "Samsung Galaxy"
-part and is mis-scaled too). It was reverted. The real fix is the stock S10 QMGs (from the stock
-firmware AP), installed with a Magisk module. Not done: a black screen instead looks like a crash.
+part and is mis-scaled too), so it was reverted. Hiding the animation was rejected, because a black screen looks like a crash.
+
+**Fixed by the dev's BootLogo Fix r1** (release `v35-r34-fixes1` on github.com/yuefdev/YuROM-Ultra). It puts
+QHD (1440x3120) boot/loop/shutdown QMGs **and the bootanimation binary from a QHD One UI 9 phone** in
+`/vendor/etc/s10-bootlogo/`, and bind-mounts them over `/system/media` and `/system/bin/bootanimation` at
+`post-fs` (`/vendor/etc/init/10-s10-bootlogo.rc`, plus one odm_sepolicy rule `allow init bootanim_exec (file (mounton))`).
+A watcher restarts the animation once after the switch to FHD+. Known: the logo plays twice.
+It has the same exact vendor-size check, so on the repartitioned phone: copy the zip, change line 98
+`[ "$sectors" = "$SECTORS" ]` to `[ "$sectors" -ge "$SECTORS" ] 2>/dev/null`, and rebuild the zip with **fresh
+ZipInfo headers** (reusing the original ZipInfo objects gave "Bad magic number for file header" on read-back).
+Verify with Python plus `unzip -t`, then run it in TWRP over adb:
+```bash
+adb reboot recovery; adb push fix.zip /tmp/bootlogo.zip
+adb shell 'unzip -p /tmp/bootlogo.zip META-INF/com/google/android/update-binary > /tmp/ub; sh /tmp/ub 3 1 /tmp/bootlogo.zip; echo EXIT=$?'
+```
+Result: `RESOURCE resolution w = 1440, h = 3120` on both runs (1440x3040 then 1080x2280), centred, no denials.
+(TWRP's toybox `grep` does not understand `\|`, so use `grep -E 'a|b'`.)
 
 ## Bootloop after the battery dies: the APEX guard module
 

@@ -411,3 +411,4 @@ trusted source is installed with `adb install`.
 - **A "bootloop" on a fresh ROM's first boot may just be setup.** Check `persist.sys.boot.reason.history`
   before tearing things apart.
 - Findings for the YuROM devs are in `D:\OS\S10 custom rom\YUROM_GITHUB_REPORT_NOTES.md`.
+- **YuROM's GitHub has Issues turned off** (no Issues tab, `/issues/new` gives 404), so bug reports go to the XDA thread. Make one BBCode post with a `[SPOILER]` per finding (`github_issues/xda_post_bbcode.txt`); pre-filled `/issues/new?title=..&body=..` links only work where Issues are on.

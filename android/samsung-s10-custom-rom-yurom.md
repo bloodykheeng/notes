@@ -377,12 +377,12 @@ trusted source is installed with `adb install`.
 
 ## Hide the gesture hint (bottom pill)
 
-YuROM's Settings > Display > Navigation bar has no "Gesture hint" switch. The setting still works if SystemUI is restarted:
+Settings > Display > Navigation bar has no "Gesture hint" switch. **That is stock Samsung, not a ROM bug:** Samsung removed it in One UI 6.1, and the official way is **Good Lock > NavStar**. Without Good Lock, the setting still works if SystemUI is restarted:
 ```sh
 adb shell settings put global navigation_bar_gesture_hint 0
 adb shell su -c 'kill $(pidof com.android.systemui)'   # SystemUI restarts at once and the pill is gone (persists across reboots)
 ```
-- **Don't** switch the overlay to `com.samsung.internal.systemui.navbar.gestural_no_hint` or `sec_gestural_no_hint`:
+- **Don't** switch the overlay by hand (NavStar manages those) to `com.samsung.internal.systemui.navbar.gestural_no_hint` or `sec_gestural_no_hint`:
   on this ROM the system rejects them and falls back to **three-button** (`navigation_mode=0`). Restore with
   `cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural`.
 - **Don't** use `pkill -f com.android.systemui` inside `adb shell '...'`: `-f` matches the shell's own command line and kills it.

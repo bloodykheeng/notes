@@ -248,6 +248,88 @@ Install: `adb push apex_bootloop_guard.zip /data/local/tmp/ && adb shell su -c '
 then `su -c cat /data/adb/apexguard/log.txt` shows `boot attempt 1` ... `boot OK`.
 Remove a module: `su -c touch /data/adb/modules/<id>/remove` and reboot.
 
+## No region (CSC/OMC) loaded: call recording missing (fixed)
+
+**Symptom:** no call recording (ExtremeROM had it), `getprop ro.csc.sales_code` empty, `/optics` and
+`/prism` are empty folders, `SemCscFeature: files does not exist from null` in logcat.
+
+**Cause:** YuROM never mounts the `optics` (carrier configs) and `prism` (OMC etc) partitions. Stock mounts
+them in first stage. `init.rc` has `import /prism/etc/init/init.rc`, but that runs before `/prism` exists.
+The partitions still held ExtremeROM's OMC (`SAOMC_SM-G973F_OXM_SWC_15_0010`, region from
+`/efs/imei/mps_code.dat` = SWC).
+
+**Fix, part 1: mount them** from the vendor fstab (`mount_all` runs at `fs`, before init's builtin
+`omc_update` at `post-fs`). Add after the efs line of `/vendor/etc/fstab.exynos9820`:
+```
+/dev/block/by-name/prism	/prism	ext4	ro,nosuid,nodev,noatime	wait,nofail
+/dev/block/by-name/optics	/optics	ext4	ro,nosuid,nodev,noatime	wait,nofail
+```
+and `/vendor/etc/init/09-yurom-omc-prism.rc`:
+```
+on fs
+    mount ext4 /dev/block/by-name/omr /omr nosuid nodev noatime noauto_da_alloc,discard,journal_checksum,data=ordered
+```
+- `nofail` = a mount failure never stops boot.
+- **`/vendor/etc` is a read-only overlayfs** (vendor_overlay), so `remount,rw /vendor` is not enough. Write
+  through a second mount of the block device:
+  ```sh
+  su -mm -c 'mount -o remount,rw /vendor; mkdir -p /mnt/vrw; mount -t ext4 -o rw /dev/block/by-name/vendor /mnt/vrw
+  cat /data/local/tmp/fstab.exynos9820 > /mnt/vrw/etc/fstab.exynos9820     # cat > keeps inode + SELinux label
+  umount /mnt/vrw; mount -o remount,ro /vendor'
+  ```
+  New files under `/vendor/etc/init` need `chcon u:object_r:vendor_configs_file:s0`.
+- `setprop ro.omc.*` / `chown` in a vendor `.rc` are refused: vendor rc runs as **vendor_init**, which may not
+  set `csc_prop` (`avc: denied { set } ... vendor_init ... csc_prop`).
+
+**Fix, part 2: set the props from Magisk.** After part 1, `omc_update` logs `SALES_CODE : SWC` and
+`OMC_PATH : /optics/configs/carriers/single/SWC/conf`, but the props stay empty. Module `omc_region_fix`,
+`post-fs-data.sh` (runs before zygote) with `resetprop -n`:
+```sh
+CODE=$(cat /efs/imei/mps_code.dat | tr -d '[:space:]'); CONF=/optics/configs/carriers/single/$CODE/conf
+resetprop -n ro.csc.sales_code $CODE;      resetprop -n ro.csc.country_code SWITZERLAND
+resetprop -n ro.csc.countryiso_code CH;    resetprop -n ril.sales_code $CODE
+resetprop -n mdc.sys.omc_salescode $CODE;  resetprop -n persist.sys.omc_path $CONF
+resetprop -n persist.sys.omc_etcpath /prism/etc/carriers/single/$CODE
+resetprop -n mdc.system.path $CONF/system  # <- the one SemCscFeature needs ("from null" before it)
+resetprop -n mdc.system.nw_path $CONF/system; resetprop -n mdc.matched_code $CODE
+resetprop -n persist.omc.sales_code $CODE; resetprop -n ro.omc.multi_csc OXM   # (+ the rest in the module)
+```
+Do **not** set `ro.omc.changetype DATA_RESET_ON` / `ro.simbased.changetype`: with a foreign SIM the phone
+could switch CSC and **factory reset itself**. Result: `SemCscFeature: Encoded`, and call recording is back.
+
+**How the property names were found:** pull `/system/framework/framework.jar`, scan its `classes*.dex` for
+printable strings with Python (`re.finditer(rb'[\x20-\x7e]{4,160}', dex)`), grep `mdc\.|persist\.sys\.omc|ro\.csc`.
+
+### Reading Samsung's encrypted `cscfeature.xml`
+OMC text files (`cscfeature.xml`, `customer_carrier_feature.json`) are encoded. Algorithm from
+fei-ke/OmcTextDecoder ("decompiled from csc.apk"): **decode** = for each byte i, rotate left by
+`SHIFTS[i % 256]`, XOR with `SALTS[i % 256]`, then **gunzip**. **Encode** = gzip(level 9), XOR salt, rotate right.
+The Python port with both 256-entry tables is in `D:\OS\S10 custom rom\omc_fix\omc_codec.py`
+(`python -I omc_codec.py decode cscfeature.xml out.xml`). Gzip's CRC proves the tables are right.
+The decoded SWC file showed ExtremeROM's edit:
+```xml
+<!-- Added by unica/mods/csc/customize.sh -->
+<CscFeature_VoiceCall_ConfigRecording>RecordingAllowed</CscFeature_VoiceCall_ConfigRecording>
+```
+
+## Quick panel Mobile data tile does nothing (ROM telephony bug, not fixed)
+
+Tap is registered (`SystemUIAnalytics ... MobileData, icon tap`), nothing else happens. The chain:
+1. SystemUI `MobileDataTileUserActionInteractor.handleClick` starts with
+   `mobileConnectionsRepository.getActiveMobileDataRepository()`; null means a silent return.
+   `dumpsys activity service com.android.systemui/.SystemUIService` shows `Current active data subId=-1`.
+2. `dumpsys telephony.registry`: `mActiveDataSubId=-1`. `dumpsys isub`: `activeDataSubId=1`.
+3. `dumpsys activity service com.android.phone/com.android.phone.TelephonyDebugService` (PhoneSwitcher section):
+   `DDS change success, PhoneId : 0` then `notifyPreferredDataSubIdChanged to -1`, `mPreferredDataSubId=-1`.
+   Samsung's `PhoneSwitcherForMultiSim` maps phone 0 to subId -1 when publishing (single SIM in a DSDS model).
+   An airplane-mode cycle does not fix it.
+Workaround: long-press the tile, or use Settings. Reported to the ROM dev.
+
+**Reading compiled code without a decompiler** (jadx download was blocked): a ~100-line Python dex walker that,
+per method of a class, lists `invoke-*` targets, field refs and `const-string`s (instruction widths by opcode,
+skipping switch/array payloads). That was enough to see the null-check-and-return in `handleClick`.
+Script: `dexcalls.py` (kept with the S10 files).
+
 ---
 
 ## Troubleshooting table
@@ -264,6 +346,11 @@ Remove a module: `su -c touch /data/adb/modules/<id>/remove` and reboot.
 | Loops after battery died | broken `/data/apex/active` | APEX guard module, or TWRP delete its contents |
 | adb shows `unauthorized` during a loop | no prompt before the UI | wait for setup; tap Allow + Always |
 | `adb pull /data/...` fails in Git Bash | path conversion | `export MSYS_NO_PATHCONV=1` |
+| No call recording, `ro.csc.sales_code` empty | optics/prism never mounted, props unset | vendor fstab entries + `omc_region_fix` module |
+| `SemCscFeature: files does not exist from null` | `mdc.system.path` unset | set it to `.../<CSC>/conf/system` |
+| `can't create /vendor/etc/...: Read-only file system` after remount | `/vendor/etc` is an overlayfs | write via a second mount of the vendor block device |
+| QS Mobile data tile does nothing | telephony publishes active data sub -1 | long-press / Settings; ROM bug |
+| "Process system isn't responding" right after boot | heavy first minutes (load 15+) | tap Wait; only worry if it repeats |
 
 ## Lessons
 

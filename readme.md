@@ -114,7 +114,7 @@ Every note is written to be followed top to bottom and copy-pasted.
 ### android
 | Note | What it covers |
 | --- | --- |
-| [samsung-s10-custom-rom-yurom.md](android/samsung-s10-custom-rom-yurom.md) | Galaxy S10 (SM-G973F) from ExtremeROM to YuROM Ultra (Android 17): official TWRP bootloop, the installer's busybox and exact-vendor-size checks patched (hash chain rebuilt), f2fs to ext4 data, installing and verifying over adb, the 5-6 restart first boot, Magisk root, a custom first-screen logo in `up_param`, why the QMG boot animation is mis-scaled, and a Magisk module that clears `/data/apex/active` after 3 failed boots |
+| [samsung-s10-custom-rom-yurom.md](android/samsung-s10-custom-rom-yurom.md) | Galaxy S10 (SM-G973F) from ExtremeROM to YuROM Ultra (Android 17): official TWRP bootloop, the installer's busybox and exact-vendor-size checks patched (hash chain rebuilt), f2fs to ext4 data, installing and verifying over adb, the 5-6 restart first boot, Magisk root, a custom first-screen logo in `up_param`, why the QMG boot animation is mis-scaled, and a Magisk module that clears `/data/apex/active` after 3 failed boots; the missing region (CSC/OMC) fixed (optics/prism mounts + Magisk props, `mdc.system.path`) to bring back call recording, decoding Samsung's encrypted `cscfeature.xml`, and the QS mobile-data tile traced to telephony publishing active data sub -1 |
 
 ### claude-code
 | Note | What it covers |

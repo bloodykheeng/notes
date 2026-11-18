@@ -163,6 +163,11 @@ with "Your local changes would be overwritten" although nobody edited anything.
 `core.fileMode false` makes each clone ignore permission bits for good. See
 [../git/git-pull-refuses-after-chmod-file-mode.md](../git/git-pull-refuses-after-chmod-file-mode.md).
 
+> **Passport keys are the exception.** If the app uses Laravel Passport, `storage/oauth-private.key` and
+> `storage/oauth-public.key` live under `storage`, so the 664 sweep above catches them, and Passport then
+> refuses to sign anything. Put them back to 600 straight after the sweep. See
+> [Passport refuses its key files](#passport-refuses-its-key-files-permissions-664) below.
+
 ---
 
 ## Why This Fix Works Permanently
@@ -325,6 +330,61 @@ setfacl -R -d -m g:www-data:rwx storage bootstrap/cache       # default ACL for 
 > Do not forget the other long-running services: `storage/logs/reverb.log` and the worker log
 > are written by www-data too, so a root-owned copy of either silences that service's logging
 > in the same way.
+
+---
+
+## Passport refuses its key files (permissions 664)
+
+Seen on NICE, 18/11/2026: both APIs (dev and prod), found during a post-deploy log check, not caused by the deploy.
+
+### Symptom
+
+Every OAuth sign-in fails (on NICE, the AI assistant's connector sign-in, the only Passport client; Sanctum
+logins are unaffected). Each attempt writes one error to the daily log:
+
+```text
+Key file "file:///var/www/<app>/storage/oauth-private.key" permissions are not correct,
+recommend changing to 600 or 660 instead of 664
+```
+
+The rest of the API keeps working, so nobody notices until they try that sign-in or read the log.
+
+### Cause
+
+`League\OAuth2\Server\CryptKey` (under Passport) checks the key file's mode before it reads it and throws on
+anything more open than 600 or 660. The keys sit in `storage/`, and a "fix storage permissions" sweep
+(`find storage -type f -exec chmod 664`, `chmod -R 775 storage`, `chmod -R ug+rwX storage`) widens them along with
+everything else. `php artisan passport:keys` writes them at 600; it is a later sweep that breaks them.
+
+### Diagnosis (read only)
+
+```bash
+ls -l /var/www/<app>/storage/oauth-*.key          # mode and owner of both keys
+ps -o user= -C php-fpm8.4 | sort -u                 # the user PHP-FPM runs as (match your PHP version)
+grep -c "permissions are not correct" /var/www/<app>/storage/logs/laravel-$(date +%F).log
+```
+
+The owner must be the PHP-FPM user (`www-data` here). With 600 only the owner reads the key, so a root-owned key at
+600 breaks the sign-in differently ("not readable").
+
+### Fix
+
+```bash
+chmod 600 /var/www/<app>/storage/oauth-private.key /var/www/<app>/storage/oauth-public.key
+chown www-data:www-data /var/www/<app>/storage/oauth-*.key   # only if ls showed another owner
+ls -l /var/www/<app>/storage/oauth-*.key                     # expect -rw------- www-data www-data
+```
+
+No restart is needed: the mode is checked on each request. Do it on every environment (NICE had the same 664 on
+dev and prod). The keys are gitignored, so a `git pull` deploy never changes their mode back; only another storage
+sweep does.
+
+### Prevention
+
+- In any "restore storage permissions" script, add the two `chmod 600` lines **after** the sweep.
+- Add `ls -l storage/oauth-*.key` to the post-deploy checks of an app that uses Passport.
+- After a deploy, grep the day's log for errors, not only `curl` the health URL: a broken OAuth flow still answers
+  200 on every other route.
 
 ---
 

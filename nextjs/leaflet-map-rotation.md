@@ -68,4 +68,16 @@ await expect.poll(turn).toMatch(/^(none|matrix\(1, 0, 0, 1,)/);
 ```
 
 A screenshot right after the turn shows grey: the extra tiles a turned view needs (6 became 12) were still loading.
-Count `img.leaflet-tile-loaded` before deciding the plugin broke the tiles.
+Count `img.leaflet-tile-loaded` before deciding the plugin broke the tiles. Wait for none pending instead
+(`expect.poll(() => count("img.leaflet-tile:not(.leaflet-tile-loaded)")).toBe(0)`, then loaded > 0): NICE's first
+light picture was grey for exactly this reason (17/11/2026).
+
+Three more traps from NICE (17/11/2026, seven maps):
+
+- **A wheel turns only the map under the pointer.** A map below a table (NICE's reach maps) is off screen, so the
+  pointer at its box's centre is outside the window and nothing turns: `scrollIntoViewIfNeeded()` before measuring.
+- **A map that draws only with data** (a visits map on a day with no visits renders "No data" and no
+  `.leaflet-container`): point its request at a day with data (`page.route(..., r => r.continue({ url }))` with the
+  date param changed) rather than drive the whole filter form.
+- **A picker's map behind a button** (NICE's `MapLocationPicker`: "Open Map" opens it in its own dialog): click it
+  first. Check every map the options were added to, not only the pages called "map".

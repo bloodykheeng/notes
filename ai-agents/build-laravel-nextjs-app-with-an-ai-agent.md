@@ -220,8 +220,23 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   as removable chips.
 - **Loading = a shaped skeleton** (`isPending`), on record pages too (composed from the page's own blocks: header,
   figure cards, tabs, details, table, map, in its grid; Letshego `RecordSkeleton.tsx`), never one grey block, never bars bunched to the left of a table (one cell per column across the width, the toolbar,
-  the View button, the pager), and never a spinner in an empty area, and **no `placeholderData`**:
-  never show the previous page's rows under new filters. Spinners are for saving and sending only.
+  the View button, the pager), and never a spinner in an empty area, and **never the previous page's rows under new
+  filters**. `placeholderData: keepPreviousData` is right only with `loading={isPending || isPlaceholderData}` drawing
+  skeleton rows: the old rows never show, but the pager, the total and the status chips stay put (NICE, 17/11/2026:
+  without it each page change dropped the total to 0 and redrew the pager and chips, which read as "paging is slow";
+  43 lists fixed). Spinners are for saving and sending only. **TanStack Query v5's flags:** `isPending` = no data
+  yet (first load), `isLoading` = `isPending && isFetching` (first load only), `isPlaceholderData` = the previous
+  key's data shown while the new key loads, `isFetching` = any request (background refreshes too). So the skeleton
+  test is `isPending || isPlaceholderData`; `isLoading` misses page changes and `isFetching` flashes on background
+  refreshes. **Swap in skeleton ROWS, do not draw skeleton cells over the old rows:** PrimeReact's DataTable
+  memoises a cell by its row (`cellMemo`), so the same rows never redraw and no skeleton shows (NICE 18/11/2026: 0 of
+  92 samples during a 132 ms request). With `lazy` the pager reads `totalRecords`, so it stays put.
+- **Invalidating a list's key reloads every query under it, the open dialog's own record too** (`["checks"]` covers
+  `["checks", "by-id", 7]`). An effect that sets up the dialog when its record arrives (which step, the form's
+  values) must do it once per record and only refresh the data on a reload: NICE's merchandising dialog jumped back
+  to the first module after each save, only when the reload came back after the save's answer (17/11/2026; the full
+  e2e run caught it, a lone run passed). Keep the opened id in a `useRef`; in the spec, wait for that reload's
+  response and assert the dialog did not move.
 - **One Export** per list or report: Excel, CSV and Print from the same rows, with **typed cells** (real dates and
   numbers, never formatted text).
 - **A new list is born with the house kit, not added on review**: the project's filter drawer (on NICE the shared
@@ -525,6 +540,13 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   no `waitForTimeout`, nothing called flaky or "cold server" without numbers. That probe found the real cause in two
   runs: a reload's last data landed at 24 s because the local API answered one call at a time (§16), so the 8 s
   scroll restore gave up. The product limit stayed; the machine was fixed.
+- **A new spec's first run failing almost everywhere is usually the spec** (NICE, 17/11/2026: 8 of 9 failed in a 10-minute
+  run of the whole file; the user asked why it took so long). Each error-context and screenshot named its own cause in
+  minutes, and only one was about the app. The PrimeReact traps behind them: `getByLabel` on a Dropdown reaches its
+  hidden input, which a click does not open (click the visible `.p-dropdown`); a figure rendered as `<a href>` is a
+  `link`, not a `button`; **Escape inside a Dialog closes the Dialog too**, not just the open picker (close a
+  MultiSelect with its trigger); a paginator moves to the new page at once, so "Showing 1 to" is gone while page 2
+  loads (assert "Showing 6 to 10 of N"). Then run one test by line, look at its pictures, next test.
 - **Before calling a test wrong, check what the app promised.** A second opinion (ChatGPT) said the reload test
   "demands scroll restoration the app doesn't promise"; `docs/decisions.md` showed I asked for it on 25/10/2026 and
   `docs/scroll-memory.md` documents it. The decisions log settles whether an assertion is a requirement; an outside
@@ -535,6 +557,19 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   dev server on 3000, stopped after"): a stopped server's task reports a failure code (127), which read to the user as
   the app failing (NICE, 12/11/2026).
 
+- **A report that builds every row in PHP does not survive growth** (NICE, 18/11/2026, the user: "what if the staff
+  are many?"). Measure first with a ROLLED-BACK benchmark at the size the business will reach (seed in
+  `DB::beginTransaction()`, time the service, `DB::rollBack()`): 80 staff for a month cost 2 s and 296 MB per request,
+  7 s per list page, an export of 169 such requests. The fix is the database: one query for the rows with every filter
+  in SQL, figures as a GROUP BY (then totals, count, sort and page from the grouped lines), list pages as COUNT +
+  LIMIT. Then `EXPLAIN ANALYZE` each step and fix what it shows, not what you guess: no function or arithmetic on the
+  indexed side of a comparison (compare raw UTC moments; NICE's list `plan_date` is its day's first moment, so "that
+  day" is a range or an equality); "no row matches" is a NOT EXISTS (a LEFT JOIN anti-join passes when one of
+  several candidates lacks the match); a composite index for each lookup. Check every version's totals against the
+  first one: a faster wrong answer was the cost of one shortcut. **`ANALYZE TABLE` (and any DDL) commits the open
+  transaction**: a benchmark that ran it left 2,400 plans, 84,000 rows and 33,600 visits in the local database
+  (found because the next run seeded twice as much; removed by their exact timestamp). Read the rows back after a
+  rolled-back benchmark.
 - **API:** Pest feature tests per rule (`php artisan test --compact --filter=...`), Pint, Larastan. The full suite
   before committing a cross-cutting change. A test that only fails in the full run means shared state (a static, a
   cache): find it.
@@ -550,7 +585,10 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   browser": write its spec, run it against the local servers, save screenshots (light and dark) and LOOK at them.
   On NICE (05/11/2026) the screenshots caught a bug every other check had passed: an applied upload's history read
   "2 unchanged" because it was compared with the schedule it had just changed. Dark mode = the app's theme cookie
-  and a reload (toggling the `dark` class from the spec skips PrimeReact's theme and shows false colours); wait for
+  and a reload (toggling the `dark` class from the spec skips PrimeReact's theme and shows false colours); set the
+  cookie while NO app page is open (`goto("about:blank")` first) and assert `<html>` has the class before the
+  picture: a page reloaded at the end of the light round wrote its own "light" cookie as it started and overwrote
+  the dark one, so NICE's "dark" pictures came out light and passed (18/11/2026); wait for
   the table's loading text to go before the picture; a spec that writes names what it makes and deletes it in
   `afterAll`. Then run the WHOLE suite: a change to a shared list can break another screen's spec.
 - `tsc --noEmit` clean, ESLint clean on changed files. Capture the real exit code (`cmd > out.txt; echo $?`,
@@ -560,7 +598,10 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
   for 150 routes. Good for rules about what reaches SQL (timezones, raw request values) and for pinning a
   card's periods (`Carbon::setTestNow` + the bindings it sends). Assert most routes built a query, or the
   guard can pass by reaching nothing.
-- **Prove every new test by putting the old code back** (copy the file aside, revert the hunk, run, restore).
+- **Prove every new test by putting the old code back** (copy the file aside, revert the hunk, run, restore). In
+  PowerShell name both ends: `Copy-Item -LiteralPath $from -Destination $to`. `Copy-Item $backup -LiteralPath $file`
+  binds `$backup` as the DESTINATION and copies the old file over the backup (NICE, 17/11/2026: the fix was lost and
+  had to be re-applied). A change made by a script is safest proved with `git stash push -- <file>` and `git stash pop`.
   After restoring, `curl` the page: `next dev`'s watcher can miss a file copied back and keep serving the old
   version (Alpha, 12/11/2026: six specs failed on a fixed layout); a real content edit makes it recompile.
 - **A crash on purpose, without test code in the app:** answer one API call with the wrong shape
@@ -614,5 +655,22 @@ Local (never on a server): `php artisan serve`, `php artisan reverb:start --debu
   # stop every stack: the shells first (they respawn children), then PHP (keeps the editor's PHP language server)
   Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" | ? { $_.CommandLine -match 'artisan|php' } | % { taskkill /PID $_.ProcessId /T /F }
   Get-CimInstance Win32_Process -Filter "Name='php.exe'" | ? { $_.CommandLine -notmatch 'language-server' } | % { Stop-Process -Id $_.ProcessId -Force }
-  ``` Servers: Supervisor (workers, Reverb), cron's `schedule:run` every minute,
-pm2 (Next.js), nginx; deploy and patch through the sibling playbooks.
+  ```
+
+- **"Stop everything" (the person is leaving, or moving to another project) is done in order and then proved**
+  (NICE, 17/11/2026). The browser run first (its teardown revokes the e2e sessions; a run left going keeps
+  Chromium and the dev server busy), then `composer dev`, then `npm run dev`. Stopping the tasks is not the proof:
+  list what is left of `php.exe`, `node.exe` (`next dev`), `cmd.exe` (`concurrently`) and Playwright's Chromium by
+  command line, stop any leftovers with the commands above, then check the ports:
+
+  ```powershell
+  foreach ($p in 8000,3000) { Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue }
+  Invoke-WebRequest http://127.0.0.1:8000/up -TimeoutSec 3 -UseBasicParsing   # must be refused
+  ```
+
+  A listener whose `OwningProcess` is 0 is a socket Windows is still closing, not a server: the request decides
+  ("actively refused" = stopped). Leave the editor's PHP language server alone. Then tell the person in one line
+  what was stopped and what is left (a test run stopped half way has no result: say it needs a full run).
+
+**Servers:** Supervisor (workers, Reverb), cron's `schedule:run` every minute, pm2 (Next.js), nginx; deploy and
+patch through the sibling playbooks.

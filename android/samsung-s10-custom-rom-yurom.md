@@ -462,8 +462,13 @@ Symptom: after a reboot the headset (dual-connection oraimo) never auto-connects
 BluetoothKeystoreService: ComputeDataThread: create, doEncrypt: true/false
 bt_btif_storage: btif_in_fetch_bonded_devices: enc key isn't available. remove device. continue.
 ```
-btif loads the bonds ~0.2 s before BluetoothKeystoreService has the decrypted link keys, so it deletes the bond.
-It is not Common Criteria mode (off; `ro.hardware.keystore=mdfpp`). No safe local fix (compiled BT stack).
+**Not a race (tested):** Bluetooth turned off before reboot and enabled only after PIN unlock still logs
+`enc key isn't available. remove device` + `bt_paired_device_deleted`. Java side:
+`BluetoothKeystoreService: init isCommonCriteriaMode: false` (DPM CC mode = admin flag OR Samsung
+`MdfUtils.isMdfEnforced()`, which is false). The native side still stores the LinkKey as an encrypted placeholder
+(15 chars, not 32 hex), using Samsung's own OpenSSL link-key encryption in `libbluetooth_jni.so`, and that key is
+never available again. `libbluetooth_jni.so` is bind-mounted from vendor by the ROM's Bluetooth_Fix r2, which may
+be the mismatch. **Don't touch `security.mdf`**: `vold` reads it too. No safe local fix.
 Workaround: re-pair after each reboot. Reported on XDA.
 
 ## Face recognition, and the 5 s lag before "Confirm PIN"

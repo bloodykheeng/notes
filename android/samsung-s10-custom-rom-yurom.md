@@ -424,6 +424,32 @@ adb shell cmd display get-user-disabled-hdr-types           # -> [1, 2, 3, 4]
 Then fully restart the app. Result: 0 `-> hdr[` switches in 40 s of scrolling reels (several before).
 (`settings put global user_disabled_hdr_formats` alone did nothing live. Use the `cmd display` command.)
 
+**That only covers HDR *video*.** Instagram reels kept triggering `-> hdr[501]` (Ultra HDR / extended-brightness
+content is not an HDR video type). Also `cmd display set-hdr-conversion-mode 3 -1` (force SDR) does nothing on the
+built-in panel. **Real fix: a static RRO overlay** (Magisk module `hdr_dimming_fix`) that makes the HDR nits equal the
+SDR nits. The ratio becomes 1x, so there is nothing to dim:
+- read the donor map: `cmd overlay lookup android android:array/config_sdrHdrMapSdrNits` (502 values: 1..500, 1500,
+  2500) and `...config_sdrHdrMapHdrNits` (199 -> 199.282 ... -> 1500)
+- overlay `res/values/arrays.xml`: `<array name="config_sdrHdrMapHdrNits">` = the SDR list
+- manifest `<overlay android:targetPackage="android" android:isStatic="true" android:priority="999"/>`
+- build with the Android SDK on the PC: `aapt2 compile --dir res -o res.zip`, `aapt2 link -I platforms/android-36/android.jar
+  --manifest AndroidManifest.xml -o unsigned.apk res.zip`, `zipalign -p 4`, `apksigner sign` (own keystore via keytool)
+- Magisk module path `system/product/overlay/S10HdrFix/S10HdrFix.apk` (preinstalled = may overlay private
+  framework resources). Reboot, then check with `cmd overlay lookup ... | sed -n 199p` -> `199.0`.
+Confirmed: both reels that went dark stay normal, and `hbmMode=off` while Instagram plays them.
+(`cmd overlay fabricate` from the shell says "must be root", and it can't do arrays anyway.)
+
+## Too dark in direct sun (privacy guard over the light sensor)
+
+Measured facing the sun: `lux=1435` (real sun is 30k-100k lux), auto brightness only `brt=0.60`, panel
+`actual_brightness=412`, forced max 1.0 gives `420`. The **sunlight HBM** (`config_autoBrightnessHbmAmbientLux` = 3000,
+`mIsInAllowedAmbientRange=false`) never started, because the privacy guard over the sensor blocks most of the light.
+One UI "Extra brightness" (`secure screen_extra_brightness=1`) did nothing. Fix in the same overlay:
+`<integer name="config_autoBrightnessHbmAmbientLux">1000</integer>` -> `mHbmData=HBM{minLux: 1000.0`.
+**Still to verify in midday sun.** Read the panel with `su -c cat /sys/class/backlight/panel/actual_brightness` (above 420 = HBM working).
+The donor's brightness curve goes up to 2450 nits (`config_screenBrightnessNits`), far beyond the S10.
+
+
 ## Face recognition, and the 5 s lag before "Confirm PIN"
 
 Face unlock does not work on R34. The dev said on XDA (post #687) that "a major update is coming very soon + Face ID".
@@ -486,7 +512,8 @@ still looped). The ExtremeXT TWRP plus the patched installer is what worked.
 | Galaxy Store "not compatible with your phone's operating system" | no store listing for S10 + Android 17 | bundle the app / install an APK |
 | Voice styles / language packs empty | stub app, Samsung TTS missing | ROM must bundle the full apps |
 | ~5 s pause before every Confirm-PIN screen | missing `ISehEngmode` HAL, 5 s getService poll | ROM fix needed (reported) |
-| Screen dims to near-black while scrolling | HDR mode: donor targets 976 nits, panel max 400 | `cmd display set-user-disabled-hdr-types 1 2 3 4` |
+| Screen dims to near-black while scrolling | HDR mode: donor targets 976 nits, panel max 400 | RRO `config_sdrHdrMapHdrNits` = SDR map (module `hdr_dimming_fix`) |
+| Too dark in direct sun | guard blocks light sensor, sunlight HBM needs 3000 lux | RRO `config_autoBrightnessHbmAmbientLux` = 1000 |
 | Screen black in sunlight, won't wake | Accidental touch protection + IR-blinded proximity sensor | turn off Accidental touch protection |
 | "Process system isn't responding" right after boot | heavy first minutes (load 15+) | tap Wait; only worry if it repeats |
 

@@ -411,8 +411,7 @@ about a second before the PIN screen. It is probably the biometric service waiti
 
 ## Galaxy Store apps that do work
 
-Good Lock + NavStar and Samsung **Compass** install from Galaxy Store (open the app's Galaxy Store link from a web
-search). So the store does serve some apps to "S10 + Android 17". Photo Editor, Studio and the language packs it does not.
+Good Lock + NavStar install from Galaxy Store, so the store does serve some apps to "S10 + Android 17". Photo Editor, Studio and the language packs it does not. Careful: "compass" apps found by web search are third-party (one had ads and a paywall; `com.ais.compassone.galaxy` is region-locked). **Samsung's compass lives in the Tools edge panel**, and YuROM leaves out firmware-only apps by design (INSTALLATION_EN.md: "Quick Share, Routines, Edge panels and similar are not included"). `pm list packages` has no edge/cocktail package at all. ExtremeROM shipped them. They need platform signing, so sideloaded APKs usually fail. Ask the dev to include them.
 
 ## The TWRP the dev links
 

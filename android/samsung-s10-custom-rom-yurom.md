@@ -424,7 +424,15 @@ which risks uncaught UnsatisfiedLinkError crashes. Reported to the dev.
 
 ## Galaxy Store apps that do work
 
-Good Lock + NavStar install from Galaxy Store, so the store does serve some apps to "S10 + Android 17". Photo Editor, Studio and the language packs it does not. Careful: "compass" apps found by web search are third-party (one had ads and a paywall; `com.ais.compassone.galaxy` is region-locked). **Samsung's compass lives in the Tools edge panel**, and YuROM leaves out firmware-only apps by design (INSTALLATION_EN.md: "Quick Share, Routines, Edge panels and similar are not included"). `pm list packages` has no edge/cocktail package at all. ExtremeROM shipped them. They need platform signing, so sideloaded APKs usually fail. Ask the dev to include them.
+Good Lock + NavStar install from Galaxy Store, so the store does serve some apps to "S10 + Android 17". Photo Editor, Studio and the language packs it does not. Careful: "compass" apps found by web search are third-party (one had ads and a paywall; `com.ais.compassone.galaxy` is region-locked). **Samsung's compass lives in the Tools edge panel** (Edge panels themselves are in One UI Home here); YuROM leaves out other firmware-only apps by design (INSTALLATION_EN.md: "Quick Share, Routines, Edge panels and similar are not included"). `pm list packages` has no edge/cocktail package at all. ExtremeROM shipped them. They need platform signing, so sideloaded APKs usually fail. Ask the dev to include them.
+
+## Screenshots and the compass panel
+
+- Screenshot: Power + Volume Down. Gesture: **Palm swipe to capture** (`settings get system surface_palm_swipe` = 1),
+  a sweep with the little-finger edge of the hand across the whole screen (it is not a 3-finger swipe). If palm detection
+  fails on the port, use Good Lock **RegiStar** (back-tap = screenshot) or **One Hand Operation+**.
+- Edge panels are part of One UI Home here (`com.sec.android.app.launcher ... edgepanel`), not a separate app. The
+  compass is the **Tools** panel (not Weather/Reminder). Get it via Edge panels > Galaxy Store if the store lists it.
 
 ## The TWRP the dev links
 

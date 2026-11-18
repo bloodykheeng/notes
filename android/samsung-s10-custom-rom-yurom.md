@@ -450,6 +450,19 @@ One UI "Extra brightness" (`secure screen_extra_brightness=1`) did nothing. Fix 
 The donor's brightness curve goes up to 2450 nits (`config_screenBrightnessNits`), far beyond the S10.
 
 
+## Bluetooth pairings deleted at every reboot (ROM bug, reported)
+
+Symptom: after a reboot the headset (dual-connection oraimo) never auto-connects and must be paired again.
+`dumpsys bluetooth_manager` shows `Bonded devices: 0` and `bredr_linkkey_known:F`, and
+`/data/misc/bluedroid/bt_config.conf` has no device sections. The boot log explains it:
+```
+BluetoothKeystoreService: ComputeDataThread: create, doEncrypt: true/false
+bt_btif_storage: btif_in_fetch_bonded_devices: enc key isn't available. remove device. continue.
+```
+btif loads the bonds ~0.2 s before BluetoothKeystoreService has the decrypted link keys, so it deletes the bond.
+It is not Common Criteria mode (off; `ro.hardware.keystore=mdfpp`). No safe local fix (compiled BT stack).
+Workaround: re-pair after each reboot. Reported on XDA.
+
 ## Face recognition, and the 5 s lag before "Confirm PIN"
 
 Face unlock does not work on R34. The dev said on XDA (post #687) that "a major update is coming very soon + Face ID".
@@ -513,6 +526,7 @@ still looped). The ExtremeXT TWRP plus the patched installer is what worked.
 | Voice styles / language packs empty | stub app, Samsung TTS missing | ROM must bundle the full apps |
 | ~5 s pause before every Confirm-PIN screen | missing `ISehEngmode` HAL, 5 s getService poll | ROM fix needed (reported) |
 | Screen dims to near-black while scrolling | HDR mode: donor targets 976 nits, panel max 400 | RRO `config_sdrHdrMapHdrNits` = SDR map (module `hdr_dimming_fix`) |
+| Headset never auto-reconnects after reboot | BT bonds deleted at boot (keystore race) | re-pair after reboot; ROM fix needed |
 | Too dark in direct sun | guard blocks light sensor, sunlight HBM needs 3000 lux | RRO `config_autoBrightnessHbmAmbientLux` = 1000 |
 | Screen black in sunlight, won't wake | Accidental touch protection + IR-blinded proximity sensor | turn off Accidental touch protection |
 | "Process system isn't responding" right after boot | heavy first minutes (load 15+) | tap Wait; only worry if it repeats |

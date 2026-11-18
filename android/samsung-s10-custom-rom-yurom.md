@@ -498,6 +498,18 @@ Good Lock + NavStar install from Galaxy Store, so the store does serve some apps
   compass is the **Tools** panel (not Weather/Reminder). **Not present on YuROM R34** (only Apps/Weather/Reminder-type panels are listed). Use Google Maps' compass or an ad-free compass app, and ask the dev to include Tools.
 - No 3-finger-swipe screenshot on One UI. Closest built-in options: RegiStar back-tap or One Hand Operation+. Third-party 3-finger apps need Accessibility (full screen access), so pick carefully.
 
+## Side key and Bixby key
+
+- **Long-pressing the side key doesn't show the power menu:** not a bug. One UI's default is the AI assistant
+  (`global function_key_config_longpress_selected_item=long_press_ai_agent_app`). Fix: Settings > Advanced features >
+  Side button > Press and hold > **Power off menu**. Side key + Volume Down always opens the power menu.
+- **The Bixby key does nothing:** YuROM (ported from a phone without one) has no Bixby app or setting, and the key is
+  unmapped. `getevent -lt` shows it as `/dev/input/event8 (gpio_keys): EV_KEY 02bf` (scancode 703), and gpio_keys uses
+  `/system/usr/keylayout/Generic_internal.kl`, which has no `key 703` line. Fix: Magisk module `bixby_key_assist`
+  overlays a copy of that file plus `key 703   ASSIST`, so the key opens the **default assistant**. You need
+  Gemini/Google installed and set as the digital assistant. The ROM ships none (`cmd role get-role-holders
+  android.app.role.ASSISTANT` is empty, and logcat shows `assistantAvailable = false`).
+
 ## The TWRP the dev links
 
 YuROM's README points to a Google Drive with a `TWRP` folder per model: the **official twrp.me 3.7.0_9-1**

@@ -508,7 +508,7 @@ Good Lock + NavStar install from Galaxy Store, so the store does serve some apps
   `/system/usr/keylayout/Generic_internal.kl`, which has no `key 703` line. Fix: Magisk module `bixby_key_assist`
   overlays a copy of that file plus `key 703   ASSIST`, so the key opens the **default assistant**. You need
   Gemini/Google installed and set as the digital assistant. The ROM ships none (`cmd role get-role-holders
-  android.app.role.ASSISTANT` is empty, and logcat shows `assistantAvailable = false`). **Verified:** with Gemini installed and set as default, the Bixby key opens Gemini.
+  android.app.role.ASSISTANT` is empty, and logcat shows `assistantAvailable = false`). **Verified:** with Gemini installed and set as default, the Bixby key opens Gemini. Tried `VOICE_ASSIST` to open it listening: the Google app logs `No activity found for intent` (it no longer has the old voice-search activity), so nothing opens. Keep `ASSIST`.
 
 ## The TWRP the dev links
 

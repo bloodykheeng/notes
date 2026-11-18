@@ -75,6 +75,11 @@ follow this, I should not have to repeat myself.
 - **`WORK-PLAN.md`**: phases, the current one, its checklist and stop point. **`docs/decisions.md`** (above).
   **`.claude/handoffs/`**: a note written when I ask, with goal, status, next steps, decisions, still-open questions
   and gotchas; the next session starts from the latest.
+- **Lessons for another project go to coding-notes, never into this project:**
+  `coding-notes/project-inbox/<that project>/YYYY-MM-DD-from-<this project>-<topic>.md`, with a header saying who it
+  is for, where it came from and its status. When I say "check coding-notes for lessons" inside a project, read its
+  inbox folder, apply what holds (read-only checks first), mark the note Resolved, move it into the project for history
+  and delete it from the inbox. Rules: [../project-inbox/README.md](../project-inbox/README.md).
 - **Each app keeps `docs/*.md`** per topic (the data model, each module, validation, scoping, dashboards, maps), a
   **user manual** in the app (a chapter per module, updated with the module), and a **mobile build guide** in the
   workspace when another developer builds the app.

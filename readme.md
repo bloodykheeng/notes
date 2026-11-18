@@ -24,6 +24,9 @@ Every note is written to be followed top to bottom and copy-pasted.
 - **[centos/laravel-nextjs-apache-centos-deploy.md](centos/laravel-nextjs-apache-centos-deploy.md)**:
   the same stack on a CentOS / RHEL 8 box with Apache (httpd) and SELinux Enforcing, plus its
   [redeploy procedure](centos/laravel-nextjs-apache-centos-redeploy.md).
+- **[project-inbox/](project-inbox/README.md)**: lessons one project left for another, one folder per receiving
+  project (`project-inbox/alpha/`, `sds/`, `letshego/`...). Inside a project, say "check coding-notes for lessons":
+  its agent applies what holds, then moves the note into that project for history.
 
 ## Contents
 

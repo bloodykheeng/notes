@@ -387,12 +387,39 @@ adb shell su -c 'kill $(pidof com.android.systemui)'   # SystemUI restarts at on
   `cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural`.
 - **Don't** use `pkill -f com.android.systemui` inside `adb shell '...'`: `-f` matches the shell's own command line and kills it.
 - Undo: `settings put global navigation_bar_gesture_hint 1`, then restart SystemUI again.
-- Good Lock + NavStar install from Galaxy Store, but on this ROM NavStar asks to switch to a **button** layout before customizing, so it does not help keep gestures without the pill. Use the toggle below.
-- **On-phone toggle, no PC:** Magisk module `gesture_hint_toggle` with an `action.sh` (Magisk 28+ shows an
+- **The proper way (works):** Galaxy Store > Good Lock > NavStar > **Swipe gestures** (bottom) > turn on **Enable extra gesture settings** (the other options are greyed out unless Buttons is chosen, which is normal). Then Settings > Display > Navigation bar > Swipe gestures > **More options** shows the **Gesture hint** switch.
+- (Retired) **On-phone toggle, no PC:** Magisk module `gesture_hint_toggle` with an `action.sh` (Magisk 28+ shows an
   **Action (▶) button** on the module in the Magisk app and runs it as root). The script flips
   `navigation_bar_gesture_hint` 0/1, prints SHOWN/HIDDEN, then `kill $(pidof com.android.systemui)`. It refuses if
   `navigation_mode` is not 2. Tip: after `magisk --install-module`, also copy `action.sh` into
-  `/data/adb/modules/<id>/` so the button works before the next reboot.
+  `/data/adb/modules/<id>/` so the button works before the next reboot. **Removed:** killing SystemUI while Magisk's action screen is open left a black screen (back did nothing; power gave the lock screen). NavStar is the right tool, so don't kill SystemUI from an app UI.
+
+## Screen goes black in sunlight (won't wake until turned face-down)
+
+Cause: **Accidental touch protection** (`settings get system screen_off_pocket` = 1) keeps the screen off while the
+proximity sensor reads "covered". Sunlight's infrared blinds the S10's `TMD4910` proximity sensor, so it reads "near".
+Notifications and Bluetooth keep working; turning the phone face-down "uncovers" it. Fix: Settings > Display >
+Accidental touch protection **off** (`settings put system screen_off_pocket 0`).
+Note for the dev: on this port `android.sensor.proximity` (type 8) is a Samsung **"Palm Proximity Sensor"**, and the
+real TMD4910 is only `com.samsung.sensor.physical_proximity`.
+
+## Face recognition, and lag before "Confirm PIN"
+
+Face unlock does not work on R34. The dev said on XDA (post #687) that "a major update is coming very soon + Face ID".
+Every screen that asks for the PIN first (Screen lock and biometrics, Extend Unlock, Secure lock settings) pauses
+about a second before the PIN screen. It is probably the biometric service waiting on the missing face backend. Re-test after the update.
+
+## Galaxy Store apps that do work
+
+Good Lock + NavStar and Samsung **Compass** install from Galaxy Store (open the app's Galaxy Store link from a web
+search). So the store does serve some apps to "S10 + Android 17". Photo Editor, Studio and the language packs it does not.
+
+## The TWRP the dev links
+
+YuROM's README points to a Google Drive with a `TWRP` folder per model: the **official twrp.me 3.7.0_9-1**
+(`.img` + `.img.tar`, README_EN.md, OFFICIAL_DOWNLOAD.url). That is the same TWRP that bootlooped here while the
+phone still had ExtremeROM's f2fs data and partitions. XDA users say to flash **vbmeta** with it (we did, and it
+still looped). The ExtremeXT TWRP plus the patched installer is what worked.
 
 ---
 
@@ -416,6 +443,7 @@ adb shell su -c 'kill $(pidof com.android.systemui)'   # SystemUI restarts at on
 | QS Mobile data tile does nothing | telephony publishes active data sub -1 | `data_tile_fix` module (`service call telephony.registry 30 i32 1`) |
 | Galaxy Store "not compatible with your phone's operating system" | no store listing for S10 + Android 17 | bundle the app / install an APK |
 | Voice styles / language packs empty | stub app, Samsung TTS missing | ROM must bundle the full apps |
+| Screen black in sunlight, won't wake | Accidental touch protection + IR-blinded proximity sensor | turn off Accidental touch protection |
 | "Process system isn't responding" right after boot | heavy first minutes (load 15+) | tap Wait; only worry if it repeats |
 
 ## Lessons

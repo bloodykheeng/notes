@@ -403,11 +403,24 @@ Accidental touch protection **off** (`settings put system screen_off_pocket 0`).
 Note for the dev: on this port `android.sensor.proximity` (type 8) is a Samsung **"Palm Proximity Sensor"**, and the
 real TMD4910 is only `com.samsung.sensor.physical_proximity`.
 
-## Face recognition, and lag before "Confirm PIN"
+## Face recognition, and the 5 s lag before "Confirm PIN"
 
 Face unlock does not work on R34. The dev said on XDA (post #687) that "a major update is coming very soon + Face ID".
-Every screen that asks for the PIN first (Screen lock and biometrics, Extend Unlock, Secure lock settings) pauses
-about a second before the PIN screen. It is probably the biometric service waiting on the missing face backend. Re-test after the update.
+
+**The PIN-screen lag is not face unlock (root cause found):** `ConfirmLockPassword` took **5.66 s** to show
+(`performCreate,5056`). In onCreate, Samsung's `EngineeringModeManager` loads `lib.engmodejni.samsung.so`, which
+asks for the AIDL HAL `vendor.samsung.hardware.security.engmode.ISehEngmode/default`. It does not exist on the
+S10 vendor, so libbinder logs `Waiting for service ...` and gives up after its fixed **5 s** getService poll
+(`didn't start. Returning NULL`). It happens on every screen that asks for the PIN first.
+How it was measured:
+```sh
+adb shell 'logcat -d -b main,system,events -v threadtime -t 20000' | grep -E "START u0.*ConfirmLock|wm_on_create_called.*ConfirmLock|Displayed .*ConfirmLock"
+# then read that PID's main-thread lines between START and onCreate
+```
+`am start -W -a android.app.action.CONFIRM_DEVICE_CREDENTIAL` only times the trampoline (70 ms). Look at the real
+`ConfirmLockPassword$InternalActivity` launch time instead. No safe local fix: the framework picks the slow JNI path
+whenever the library *loads*, and its fallback ("em library is disabled, will use service") needs the library gone,
+which risks uncaught UnsatisfiedLinkError crashes. Reported to the dev.
 
 ## Galaxy Store apps that do work
 
@@ -442,6 +455,7 @@ still looped). The ExtremeXT TWRP plus the patched installer is what worked.
 | QS Mobile data tile does nothing | telephony publishes active data sub -1 | `data_tile_fix` module (`service call telephony.registry 30 i32 1`) |
 | Galaxy Store "not compatible with your phone's operating system" | no store listing for S10 + Android 17 | bundle the app / install an APK |
 | Voice styles / language packs empty | stub app, Samsung TTS missing | ROM must bundle the full apps |
+| ~5 s pause before every Confirm-PIN screen | missing `ISehEngmode` HAL, 5 s getService poll | ROM fix needed (reported) |
 | Screen black in sunlight, won't wake | Accidental touch protection + IR-blinded proximity sensor | turn off Accidental touch protection |
 | "Process system isn't responding" right after boot | heavy first minutes (load 15+) | tap Wait; only worry if it repeats |
 

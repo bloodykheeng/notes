@@ -453,23 +453,26 @@ goes dark instead of brighter. (At lux 1435 behind a privacy guard HBM did not s
 (-> `mHbmData=HBM{minLux: 100000.0`). Max is then 1.0 (~420 nits): not dazzling, but never black.
 **Verified in the sun (2026-11-18):** the bar rises to max and stays readable, with no blackout, and eases down facing away. One UI "Extra brightness" (`secure screen_extra_brightness`) made no difference.
 
-## Bluetooth pairings deleted at every reboot (ROM bug, reported)
+## Bluetooth pairings deleted at every reboot: FIXED (Samsung root check in libbluetooth_jni)
 
 Symptom: after a reboot the headset (dual-connection oraimo) never auto-connects and must be paired again.
-`dumpsys bluetooth_manager` shows `Bonded devices: 0` and `bredr_linkkey_known:F`, and
-`/data/misc/bluedroid/bt_config.conf` has no device sections. The boot log explains it:
+`dumpsys bluetooth_manager` shows `Bonded devices: 0`, `bredr_linkkey_known:F`, and the boot log has
+`bt_btif_storage: btif_in_fetch_bonded_devices: enc key isn't available. remove device` + `bt_paired_device_deleted`.
+What it is not: a startup race (Bluetooth kept off until after PIN unlock still deleted the bond), and not Common
+Criteria (`BluetoothKeystoreService: init isCommonCriteriaMode: false`). Also don't touch `security.mdf`
+(`vold` reads it). What it is: on **rooted/modified Samsung** builds, the native library stores the LinkKey with its
+own encryption (15-char placeholder in bt_config.conf) and refuses to restore it, the known "rooted Samsung loses BT
+pairings" problem (XDA thread 3682172, Magisk module **3arthur6/BluetoothLibraryPatcher**).
+The patcher has no Android 17 entry, but its **API 36 pattern matches YuROM's lib exactly once**:
 ```
-BluetoothKeystoreService: ComputeDataThread: create, doEncrypt: true/false
-bt_btif_storage: btif_in_fetch_bonded_devices: enc key isn't available. remove device. continue.
+libbluetooth_jni.so  pre : 00122a0140395f01086b00020054   (cmp w10,w8 ; b.eq)
+                     post: 00122a0140395f01086bde030014   (cmp w10,w8 ; b  -> skip the check)
 ```
-**Not a race (tested):** Bluetooth turned off before reboot and enabled only after PIN unlock still logs
-`enc key isn't available. remove device` + `bt_paired_device_deleted`. Java side:
-`BluetoothKeystoreService: init isCommonCriteriaMode: false` (DPM CC mode = admin flag OR Samsung
-`MdfUtils.isMdfEnforced()`, which is false). The native side still stores the LinkKey as an encrypted placeholder
-(15 chars, not 32 hex), using Samsung's own OpenSSL link-key encryption in `libbluetooth_jni.so`, and that key is
-never available again. `libbluetooth_jni.so` is bind-mounted from vendor by the ROM's Bluetooth_Fix r2, which may
-be the mismatch. **Don't touch `security.mdf`**: `vold` reads it too. No safe local fix.
-Workaround: re-pair after each reboot. Reported on XDA.
+YuROM uses `/vendor/lib64/s10-r8/libbluetooth_jni.so`, bind-mounted over the APEX copy by Bluetooth_Fix r2. So patch
+that file in place: back it up, change exactly one aligned instruction (3 bytes at 0x7abae8), and write it through a
+second vendor mount (`cat >` keeps the inode and the `system_lib_file` label). Bluetooth must be off while writing. Reboot.
+Result: pair once, reboot, `Bonded devices: 1`, and no `enc key isn't available` in the log.
+Undo: write back `/data/adb/bt_patch_backup/libbluetooth_jni.ORIGINAL.so` (sha 5a1ee6c3…; patched e4180f32…).
 
 ## Face recognition, and the 5 s lag before "Confirm PIN"
 
@@ -546,7 +549,7 @@ still looped). The ExtremeXT TWRP plus the patched installer is what worked.
 | Voice styles / language packs empty | stub app, Samsung TTS missing | ROM must bundle the full apps |
 | ~5 s pause before every Confirm-PIN screen | missing `ISehEngmode` HAL, 5 s getService poll | ROM fix needed (reported) |
 | Screen dims to near-black while scrolling | HDR mode: donor targets 976 nits, panel max 400 | RRO `config_sdrHdrMapHdrNits` = SDR map (module `hdr_dimming_fix`) |
-| Headset never auto-reconnects after reboot | BT bonds deleted at boot (keystore race) | re-pair after reboot; ROM fix needed |
+| Headset never auto-reconnects after reboot | Samsung root check in libbluetooth_jni deletes bonds | patch `b.eq`->`b` (BluetoothLibraryPatcher API 36 pattern) |
 | Screen goes dark in direct sun (bar high) | sunlight HBM sends values beyond the S10 driver range | RRO `config_autoBrightnessHbmAmbientLux` = 100000 (HBM off) |
 | Screen black in sunlight, won't wake | Accidental touch protection + IR-blinded proximity sensor | turn off Accidental touch protection |
 | "Process system isn't responding" right after boot | heavy first minutes (load 15+) | tap Wait; only worry if it repeats |

@@ -403,6 +403,27 @@ Accidental touch protection **off** (`settings put system screen_off_pocket 0`).
 Note for the dev: on this port `android.sensor.proximity` (type 8) is a Samsung **"Palm Proximity Sensor"**, and the
 real TMD4910 is only `com.samsung.sensor.physical_proximity`.
 
+## Screen suddenly goes almost black while scrolling (HDR videos): fixed
+
+Symptom: while scrolling Instagram/YouTube, the screen dims to near-black for a moment, then recovers. The
+brightness slider looks unchanged (with adaptive brightness on, it shows your preference, not the live level).
+Not the light sensor (`lux=52` steady). Logcat `DisplayPowerController` shows a switch each time an HDR video is on screen:
+```
+Animating brightness: target=498(1.95), sdrTarget=125(0.49), reason=automatic[125] -> hdr[498]
+BrightnessEvent: brt=0.4896(87.0%)(hdr=1.9526), nits=198.2(hdr=976.3) ... reason=automatic [ hdr ]
+```
+while the panel reports `HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=400.0 ...}`. The donor's HDR
+brightness targets 976 nits on a panel declaring 400, so Android dims the SDR UI to "make room" and everything goes dark.
+**Fix (disable HDR output, reversible):**
+```sh
+adb shell settings put global are_user_disabled_hdr_formats_allowed 0
+adb shell cmd display set-user-disabled-hdr-types 1 2 3 4   # DolbyVision, HDR10, HLG, HDR10+
+adb shell cmd display get-user-disabled-hdr-types           # -> [1, 2, 3, 4]
+# undo: cmd display set-user-disabled-hdr-types   (no args), settings delete global are_user_disabled_hdr_formats_allowed
+```
+Then fully restart the app. Result: 0 `-> hdr[` switches in 40 s of scrolling reels (several before).
+(`settings put global user_disabled_hdr_formats` alone did nothing live. Use the `cmd display` command.)
+
 ## Face recognition, and the 5 s lag before "Confirm PIN"
 
 Face unlock does not work on R34. The dev said on XDA (post #687) that "a major update is coming very soon + Face ID".
@@ -465,6 +486,7 @@ still looped). The ExtremeXT TWRP plus the patched installer is what worked.
 | Galaxy Store "not compatible with your phone's operating system" | no store listing for S10 + Android 17 | bundle the app / install an APK |
 | Voice styles / language packs empty | stub app, Samsung TTS missing | ROM must bundle the full apps |
 | ~5 s pause before every Confirm-PIN screen | missing `ISehEngmode` HAL, 5 s getService poll | ROM fix needed (reported) |
+| Screen dims to near-black while scrolling | HDR mode: donor targets 976 nits, panel max 400 | `cmd display set-user-disabled-hdr-types 1 2 3 4` |
 | Screen black in sunlight, won't wake | Accidental touch protection + IR-blinded proximity sensor | turn off Accidental touch protection |
 | "Process system isn't responding" right after boot | heavy first minutes (load 15+) | tap Wait; only worry if it repeats |
 

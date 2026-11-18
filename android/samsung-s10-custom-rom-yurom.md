@@ -439,16 +439,19 @@ SDR nits. The ratio becomes 1x, so there is nothing to dim:
 Confirmed: both reels that went dark stay normal, and `hbmMode=off` while Instagram plays them.
 (`cmd overlay fabricate` from the shell says "must be root", and it can't do arrays anyway.)
 
-## Too dark in direct sun (privacy guard over the light sensor)
+## Screen goes dark in direct sun (sunlight HBM drives the panel out of range)
 
-Measured facing the sun: `lux=1435` (real sun is 30k-100k lux), auto brightness only `brt=0.60`, panel
-`actual_brightness=412`, forced max 1.0 gives `420`. The **sunlight HBM** (`config_autoBrightnessHbmAmbientLux` = 3000,
-`mIsInAllowedAmbientRange=false`) never started, because the privacy guard over the sensor blocks most of the light.
-One UI "Extra brightness" (`secure screen_extra_brightness=1`) did nothing. Fix in the same overlay:
-`<integer name="config_autoBrightnessHbmAmbientLux">1000</integer>` -> `mHbmData=HBM{minLux: 1000.0`.
-**Still to verify in midday sun.** Read the panel with `su -c cat /sys/class/backlight/panel/actual_brightness` (above 420 = HBM working).
-The donor's brightness curve goes up to 2450 nits (`config_screenBrightnessNits`), far beyond the S10.
-
+What the user saw with the brightness bar open in the sun: the bar **climbs, then the screen suddenly goes dark**;
+facing away, the screen lights up again **as the bar comes back down**. So the dark state lines up with the
+**top of the range**, the sunlight HBM above 1.0, and not with low brightness.
+Numbers: forced `cmd display set-brightness 1.0` gives `/sys/class/backlight/panel/brightness` 25500,
+`actual_brightness` 420 (fine). Driver `max_brightness` = 48600. The donor's curve goes to 2450 nits
+(`config_screenBrightnessNits`, backlight up to 1275), far past what the S10 driver takes, so in HBM the panel
+goes dark instead of brighter. (At lux 1435 behind a privacy guard HBM did not start; in strong sun it does.)
+**First attempt was wrong:** lowering `config_autoBrightnessHbmAmbientLux` to 1000 made HBM start *more* often.
+**Fix:** HBM effectively off in the same RRO, `<integer name="config_autoBrightnessHbmAmbientLux">100000</integer>`
+(-> `mHbmData=HBM{minLux: 100000.0`). Max is then 1.0 (~420 nits): not dazzling, but never black.
+**To verify in midday sun.** One UI "Extra brightness" (`secure screen_extra_brightness`) made no difference.
 
 ## Bluetooth pairings deleted at every reboot (ROM bug, reported)
 
@@ -527,7 +530,7 @@ still looped). The ExtremeXT TWRP plus the patched installer is what worked.
 | ~5 s pause before every Confirm-PIN screen | missing `ISehEngmode` HAL, 5 s getService poll | ROM fix needed (reported) |
 | Screen dims to near-black while scrolling | HDR mode: donor targets 976 nits, panel max 400 | RRO `config_sdrHdrMapHdrNits` = SDR map (module `hdr_dimming_fix`) |
 | Headset never auto-reconnects after reboot | BT bonds deleted at boot (keystore race) | re-pair after reboot; ROM fix needed |
-| Too dark in direct sun | guard blocks light sensor, sunlight HBM needs 3000 lux | RRO `config_autoBrightnessHbmAmbientLux` = 1000 |
+| Screen goes dark in direct sun (bar high) | sunlight HBM sends values beyond the S10 driver range | RRO `config_autoBrightnessHbmAmbientLux` = 100000 (HBM off) |
 | Screen black in sunlight, won't wake | Accidental touch protection + IR-blinded proximity sensor | turn off Accidental touch protection |
 | "Process system isn't responding" right after boot | heavy first minutes (load 15+) | tap Wait; only worry if it repeats |
 

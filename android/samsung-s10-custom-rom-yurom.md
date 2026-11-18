@@ -451,7 +451,7 @@ goes dark instead of brighter. (At lux 1435 behind a privacy guard HBM did not s
 **First attempt was wrong:** lowering `config_autoBrightnessHbmAmbientLux` to 1000 made HBM start *more* often.
 **Fix:** HBM effectively off in the same RRO, `<integer name="config_autoBrightnessHbmAmbientLux">100000</integer>`
 (-> `mHbmData=HBM{minLux: 100000.0`). Max is then 1.0 (~420 nits): not dazzling, but never black.
-**To verify in midday sun.** One UI "Extra brightness" (`secure screen_extra_brightness`) made no difference.
+**Verified in the sun (2026-11-18):** the bar rises to max and stays readable, with no blackout, and eases down facing away. One UI "Extra brightness" (`secure screen_extra_brightness`) made no difference.
 
 ## Bluetooth pairings deleted at every reboot (ROM bug, reported)
 

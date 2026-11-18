@@ -432,7 +432,8 @@ Good Lock + NavStar install from Galaxy Store, so the store does serve some apps
   a sweep with the little-finger edge of the hand across the whole screen (it is not a 3-finger swipe). If palm detection
   fails on the port, use Good Lock **RegiStar** (back-tap = screenshot) or **One Hand Operation+**.
 - Edge panels are part of One UI Home here (`com.sec.android.app.launcher ... edgepanel`), not a separate app. The
-  compass is the **Tools** panel (not Weather/Reminder). Get it via Edge panels > Galaxy Store if the store lists it.
+  compass is the **Tools** panel (not Weather/Reminder). **Not present on YuROM R34** (only Apps/Weather/Reminder-type panels are listed). Use Google Maps' compass or an ad-free compass app, and ask the dev to include Tools.
+- No 3-finger-swipe screenshot on One UI. Closest built-in options: RegiStar back-tap or One Hand Operation+. Third-party 3-finger apps need Accessibility (full screen access), so pick carefully.
 
 ## The TWRP the dev links
 

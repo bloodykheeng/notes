@@ -768,6 +768,14 @@ inside a `case` arm fails with "no closing quote"; avoid `(` in parameter expans
   utterances whose id came from LOCAL (flag `/data/local/tmp/textcall_uplink.lt` re-enables). Result: Text call replies go
   to the caller; Live translate works as on stock S10 (one way) without the loop. Open: an AP echo-canceller route
   (`MCD_TXSE*` with `REFEXT4CH`) might remove the voice from the recognizer's tap.
+- **v5: the ghost filter (Live translate works both ways, no loop).** Every recognized phrase has an id, and its spoken
+  translation reuses it (`executeSttResults(LOCAL<id>)` ... `TextCall@<id>`). The first log line of a new phrase marks when
+  recognition started. A phrase that **starts while the daemon is injecting, or within ~1.5 s after**, is the recognizer
+  hearing our own translation, so its id goes into `ghost_ids` and its translation is not injected. Since that ghost
+  translation then only plays locally, the recognizer doesn't hear it and the loop dies after one step. Real phrases
+  (started while not injecting) are forwarded. Tested: each translation reached the second phone, typing stops when
+  you stop talking, log showed 2 ghosts blocked; Text call unchanged. Flags: `.nolt` (don't forward Live translate),
+  `.off` (forward nothing), `.bt` (also act in Bluetooth calls, still buzzes), `.mode n0|n1|both` (experiments only).
 - **Leftover experiment flags.** After the NSRC0-only test, the command that removed `textcall_uplink.mode` sat behind a
   `sh -n ... || exit 1` that failed, so it never ran, and Text call silently stayed on NSRC0 (nothing reached the caller).
   After any experiment, list the flag files (`ls /data/local/tmp/textcall_uplink.*`) and check the log's `mode=` field.

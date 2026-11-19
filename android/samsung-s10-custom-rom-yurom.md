@@ -788,6 +788,10 @@ inside a `case` arm fails with "no closing quote"; avoid `(` in parameter expans
   i.e. after Live translate had already unmuted, so the mic stayed muted (noticed when the user went back to the call
   screen). v7 restores the mute only for Text call utterances (mic muted for the whole call), not for LOCAL (Live
   translate) ones.
+- **Headset connected during a call has no call audio, dialer Bluetooth button greyed out.** `dumpsys bluetooth_manager`
+  showed A2DP connecting fine but the HEADSET (HFP) profile timing out after 30 s and the retry failing, after which the
+  device's "Calls" switch was off (media only). Turning Calls back on logged `HFS-setConnectionPolicy ..., 100` and HFP
+  connected. Not the daemon (no log activity). Connect the headset before the call, or check Bluetooth > device > Calls.
 - **Leftover experiment flags.** After the NSRC0-only test, the command that removed `textcall_uplink.mode` sat behind a
   `sh -n ... || exit 1` that failed, so it never ran, and Text call silently stayed on NSRC0 (nothing reached the caller).
   After any experiment, list the flag files (`ls /data/local/tmp/textcall_uplink.*`) and check the log's `mode=` field.

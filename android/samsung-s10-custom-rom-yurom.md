@@ -788,6 +788,22 @@ inside a `case` arm fails with "no closing quote"; avoid `(` in parameter expans
   i.e. after Live translate had already unmuted, so the mic stayed muted (noticed when the user went back to the call
   screen). v7 restores the mute only for Text call utterances (mic muted for the whole call), not for LOCAL (Live
   translate) ones.
+- **v8 (current): the mic still showed muted after Live translate, because the daemon lagged 5-13 s.** In a Bluetooth
+  Live translate call the user typed a few messages, then spoke, then pressed back: the mic was muted. Two causes:
+  1. **Lag.** The in-call UI logs hundreds of `SCallUI` lines a second. The daemon read every line in mksh (case match
+     plus a `tinymix` call on each loop pass), so it fell 5-13 s behind the log. It re-muted (`AudioRil setTxMute` at
+     22:50:49) in the middle of a real Live translate phrase, and the same lag made that phrase look like it started
+     "while injecting", so the ghost filter dropped it.
+  2. **Typed messages in Live translate are not LOCAL.** They get epoch-timestamp ids (`TextCall@1795...`), so v7 saw
+     `lt=0` and restored the mute after them, but Live translate keeps the mic open.
+  Fixes: let logcat filter (`logcat -v brief -T 1 -s SCallUI:I -e '<regex>'`, regex
+  `TxAudioSynthesizerProcessor.*(SPEAKING|onDone|onError|STOP|IDLE)|executeSttResults.LOCAL[0-9]+. - addSttTextCallMessage, even`),
+  so the shell only sees a few lines per utterance; set `lt_session=1` on the first LOCAL phrase and never re-mute for
+  the rest of that call; reset `lt_session`, `lt_ids`, `ghost_ids` when the call ends. The single-instance cleanup had to
+  match the new logcat command line too (`"logcat -v brief -T 1 -s SCallUI:I"*`). Verified 2026-11-19: Bluetooth and
+  phone-earpiece Live translate, typed + spoken, mic not muted after pressing back, Text call still re-mutes as Samsung
+  intends. Lesson: a shell daemon that follows logcat must filter in logcat (`-e`, tag filters), never in the shell, or it
+  drifts behind and every time-based decision (ghost window, mute restore) goes wrong.
 - **Headset connected during a call has no call audio, dialer Bluetooth button greyed out.** `dumpsys bluetooth_manager`
   showed A2DP connecting fine but the HEADSET (HFP) profile timing out after 30 s and the retry failing, after which the
   device's "Calls" switch was off (media only). Turning Calls back on logged `HFS-setConnectionPolicy ..., 100` and HFP

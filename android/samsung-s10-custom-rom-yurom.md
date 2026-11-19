@@ -355,6 +355,43 @@ per method of a class, lists `invoke-*` targets, field refs and `const-string`s 
 skipping switch/array payloads). That was enough to see the null-check-and-return in `handleClick`.
 Script: `dexcalls.py` (kept with the S10 files).
 
+### Tile "slow to turn on" with Wi-Fi off: a 5 s system_server freeze (fixed 2026-11-19)
+
+Symptom: Wi-Fi on, the data tile toggles instantly. Wi-Fi off: **off** is instant, **on** takes 3-5 s before the
+tile colours up. Measuring first (don't guess):
+- Tapping with `input tap` and timing: tile state changed in ~0.1 s, data connected in ~0.4 s. So telephony was fine.
+- The user's own taps with `logcat -c` before: SystemUI's log (`Tile.MobileDataTile ... state=2`) was also fast,
+  **but** right before every "on" tap: `W/Looper (system_server): Slow dispatch took 5015ms main ...
+  LoadedApk$ReceiverDispatcher` and `Slow delivery took 4426ms android.ui ... GestureDetector`. The tap itself
+  sat in a queue for 5 s. The freeze always started right after the "off" (= no network at all, since Wi-Fi was off).
+- Stack of the frozen main thread: `kill -3 <system_server pid>` writes `/data/anr/trace_00` (`debuggerd -j` from a
+  Magisk shell fails: `Failed to write tombstoned output: Permission denied`, SELinux won't let system_server write
+  to the su pipe). The main thread was in
+  `RealTimeTokenService$2.onReceive` -> JNI `RealTimeTokenManager::getActiveTokenNumber` (`librtts_client.so`) ->
+  `AServiceManager_getService` -> `usleep` loop.
+- `RealTimeTokenService` (Samsung, `services.jar`) listens to `CONNECTIVITY_CHANGE`, `BOOT_COMPLETED`, `TIME_SET`;
+  when the active network is not connected it asks the HAL
+  `vendor.samsung.hardware.security.rtts.ISehRealTimeToken/default` for the token count. The S10 vendor has no such
+  HAL (same class of problem as the missing `ISehEngmode`), and libbinder's `getService` polls 5 s before returning
+  NULL, on system_server's main thread. SystemServer starts it with a hard-coded check (`"36"` >= 34), no prop to turn
+  it off; patching services.jar risks a bootloop.
+
+**Fix: Magisk module `rtts_stub`.** A 6 KB NDK program (`rtts_stub_src/rtts_stub.c`) that `dlopen`s
+`libbinder_ndk.so`, defines a class with descriptor `vendor.samsung.hardware.security.rtts.ISehRealTimeToken`,
+`AServiceManager_addService(binder, ".../default")`, `ABinderProcess_joinThreadPool()`, and answers every
+transaction with `UNKNOWN_TRANSACTION`. The lookup is now instant; the client logs
+`getActiveTokenNumber error[0]` after ~1 ms (it failed before too, just 5 s later). No "Slow dispatch" any more.
+- `AServiceManager_addService` / `ABinderProcess_*` are not in the NDK stubs: get them with `dlsym`.
+- servicemanager only demands a VINTF manifest entry for binders with VINTF stability; a plain local binder can be
+  registered under a HAL-style name.
+- `sepolicy.rule`: `allow system_server magisk binder { call transfer }`, `allow system_server default_android_service
+  service_manager find`, `allow servicemanager magisk binder { call transfer }` (+ dir/file/process getattr so it
+  can read the caller). Live testing first with `magiskpolicy --live "<rules>"`.
+- Built with NDK 30: `aarch64-linux-android29-clang -O2 -s -o rtts_stub rtts_stub.c -ldl`.
+Same freeze hit every full network loss (airplane mode, leaving Wi-Fi with data off), not only the tile.
+Also `data_tile_fix` v2: checks every 2 s for 3 min after boot (was: wait 20 s, then every 30 s), because the
+PhoneSwitcher -1 bug returns at every boot and the tile ignores taps until the fix lands.
+
 ## Galaxy Store: "not compatible with your phone's operating system"
 
 Gallery's Photo Editor, Galaxy AI language packs / voice styles, Samsung Semantic Core all fail. The ROM ships
@@ -820,6 +857,15 @@ Good Lock + NavStar install from Galaxy Store, so the store does serve some apps
 
 ## Screenshots and the compass panel
 
+- **Quick panel tiles (One UI 9):** SystemUI owns `Settings.Secure sysui_qs_tiles` and writes it back ~10 ms after any
+  `settings put` (even as root), dropping what you added. Add tiles with the panel's Edit (pencil) button instead.
+  Samsung's full lists are in SystemUI.apk strings `sec_quick_settings_tiles_default` / `sec_quick_settings_tiles_stock`
+  (`aapt2 dump resources SystemUI.apk`), with a spec-to-package map (e.g. `AllShareCast` = Smart View
+  `com.samsung.android.smartmirroring`, `ScreenRecorder` = `com.samsung.android.app.smartcapture`). **Take screenshot** is the
+  built-in `ScreenCapture` tile. YuROM R34 lacks the apps behind Smart View, Screen recorder (Samsung Capture), Quick Share,
+  Link to Windows, Modes and Routines and Secure Folder, so those tiles never appear; they can be added as Magisk
+  /system/app modules like the other firmware APKs (Secure Folder needs Knox, which root has tripped).
+
 - Screenshot: Power + Volume Down. Gesture: **Palm swipe to capture** (`settings get system surface_palm_swipe` = 1),
   a sweep with the little-finger edge of the hand across the whole screen (it is not a 3-finger swipe). If palm detection
   fails on the port, use Good Lock **RegiStar** (back-tap = screenshot) or **One Hand Operation+**.
@@ -910,7 +956,7 @@ How to work a stuck problem on a port ROM (in order):
 - **A "bootloop" on a fresh ROM's first boot may just be setup.** Check `persist.sys.boot.reason.history`
   before tearing things apart.
 - Findings for the YuROM devs are in `D:\OS\S10 custom rom\YUROM_GITHUB_REPORT_NOTES.md`.
-- **Reported on XDA ([thread 4805709](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/), pages 35-36; post links are `.../post-<id>`, copied from each post's share icon):** [#682](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90822509) main report (installer, CSC/OMC, data tile, Galaxy Store, first boot); #685 gesture hint (later corrected: NavStar); [#691](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90823381) the 5 s Confirm-PIN lag (ISehEngmode); #693 sunlight black screen + Tools panel/Quick Share/Routines request; #694 request to bundle language packs, Samsung TTS, Photo Editor, Studio, Semantic Core; [#695](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90823502) HDR dimming while scrolling (976 vs 400 nits) + adb workaround. [#696](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90823566) Bluetooth pairings lost at reboot; [#697](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90823583) sunlight darkening (HBM out of range) + fix; [#701](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90823652) Bluetooth FIXED (BluetoothLibraryPatcher API 36 pattern). #702 update to #695 (real HDR fix = RRO overlay) + Bixby key unmapped / no assistant + fix. [#707](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90825076) (2026-11-19): missing Samsung apps (Language packs = Intelligence Voice Services, call transcripts = Call Services, TTS), the VOICE_TX audioserver crash patch, and Text call + Live translate reaching the caller through the ABOX uplink (credit gsm2sip). [#709](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90825159): reply to 67IJUSTBIPED (#708, "app not installed"): ASKS -3001 + how to install as a Magisk /system/app module, and a correction to #707 (Live translate stays one-way because of the listener loop). [#711](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90825186): how to build a Magisk /system/app module (by hand and with the Python script), for 67IJUSTBIPED (#710). [#712](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90825193): update to #709, Live translate works both ways (ghost filter); Bluetooth still one-way. [#715](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90825222): reply to DODO51 (in French): missing Samsung apps for voice input / call assist, accidental touch protection. #714: update, Text call and Live translate also work over a Bluetooth headset (inject the headset mix SIFS2). #713 (DODO51, S10+ G975F): 13 issues incl. Galaxy AI call/message assist, voice input in Settings search, accidental touch protection, auto brightness, double tap to wake, off-charging screen. Other users: #698-#700 (67IJUSTBIPED) battery drain, min CPU stuck at 502 MHz. Another user (#684) confirmed the store problem and reported weak signal with greyed data arrows outdoors (not yet checked here).
+- **Reported on XDA ([thread 4805709](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/), pages 35-36; post links are `.../post-<id>`, copied from each post's share icon):** [#682](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90822509) main report (installer, CSC/OMC, data tile, Galaxy Store, first boot); #685 gesture hint (later corrected: NavStar); [#691](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90823381) the 5 s Confirm-PIN lag (ISehEngmode); #693 sunlight black screen + Tools panel/Quick Share/Routines request; #694 request to bundle language packs, Samsung TTS, Photo Editor, Studio, Semantic Core; [#695](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90823502) HDR dimming while scrolling (976 vs 400 nits) + adb workaround. [#696](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90823566) Bluetooth pairings lost at reboot; [#697](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90823583) sunlight darkening (HBM out of range) + fix; [#701](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90823652) Bluetooth FIXED (BluetoothLibraryPatcher API 36 pattern). #702 update to #695 (real HDR fix = RRO overlay) + Bixby key unmapped / no assistant + fix. [#707](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90825076) (2026-11-19): missing Samsung apps (Language packs = Intelligence Voice Services, call transcripts = Call Services, TTS), the VOICE_TX audioserver crash patch, and Text call + Live translate reaching the caller through the ABOX uplink (credit gsm2sip). [#709](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90825159): reply to 67IJUSTBIPED (#708, "app not installed"): ASKS -3001 + how to install as a Magisk /system/app module, and a correction to #707 (Live translate stays one-way because of the listener loop). [#711](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90825186): how to build a Magisk /system/app module (by hand and with the Python script), for 67IJUSTBIPED (#710). [#712](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90825193): update to #709, Live translate works both ways (ghost filter); Bluetooth still one-way. [#715](https://xdaforums.com/t/rom-port-yurom-ultra-v35-one-ui-9-android-17-galaxy-s10e-s10-s10-exynos.4805709/post-90825222): reply to DODO51 (in French): missing Samsung apps for voice input / call assist, accidental touch protection. Draft #18 (`github_issues/xda_post_18_data_tile_freeze_rtts.txt`, 2026-11-19): the RealTimeTokenService 5 s freeze + `rtts_stub`, data_tile_fix v2, textcall_uplink v8 (link to add once posted). #714: update, Text call and Live translate also work over a Bluetooth headset (inject the headset mix SIFS2). #713 (DODO51, S10+ G975F): 13 issues incl. Galaxy AI call/message assist, voice input in Settings search, accidental touch protection, auto brightness, double tap to wake, off-charging screen. Other users: #698-#700 (67IJUSTBIPED) battery drain, min CPU stuck at 502 MHz. Another user (#684) confirmed the store problem and reported weak signal with greyed data arrows outdoors (not yet checked here).
 - **Repo lineage:** `ArtisanROM/ArtisanROM` (the original, multi-device, UN1CA-based, Issues on) -> `S10Portt/ArtisanROM` (the S10 port, branch `port/exynos9820-s10`) -> `yuefdev/YuROM-Ultra` (YuROM releases). GitHub disables Issues on forks by default, so YuROM bugs go to XDA. Only take a bug upstream to ArtisanROM if it is in shared code, not the S10 port.
 - **Writing XDA posts (checklist, learned the hard way):** one BBCode post with a `[SPOILER]` per finding; **every name in the
   credits gets a link** (the repo, the issue `#462`, the tool, and the earlier post `.../post-<id>` from the post's share icon);

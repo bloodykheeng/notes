@@ -710,10 +710,33 @@ agent's safety check. So every test ran as a **script on the phone**: armed over
 (`tinymix get "ABOX NSRC0 Bridge"` turns On), runs the steps on a timer, restores everything and writes a log that is read
 after replugging. Keep only one armed copy (a helper lists/stops them; never `pkill -f`, it matches its own shell).
 
-### Next (in progress)
+### Text call working: the final, simpler solution (no kernel module needed)
 
-Text call: route the HAL's playback RDMA (RDMA0, 2ch 48 kHz) to SIFS2 (`SPUS OUT0 = SIFS2`), run the pacer, switch NSRC0/1, and
-undo Text call's `setTxMute` while it runs. Live translate with "Mute my voice" off has no TX mute.
+Getting Text call's own read-aloud into the call took four more rounds:
+
+| Try | Result | Lesson |
+| --- | --- | --- |
+| RDMA0 (HAL playback) moved to SIFS2 (`SPUS OUT0 = SIFS2`) | RDMA0 restarts 6x in 15 ms and gives up; Text call says "wait for current response to be sent" | a HAL stream won't start on a SIFS with no real output behind it (and SIFS2 was clocked at 16 kHz) |
+| also moved RDMA4 | **both phones silent** | RDMA4 (2ch 32 kHz, opened at call start) is the **downlink**; never move it |
+| pacer capture alone (`tinypcm cap -d 17`) | `read: stalled: no frames moved` | SIFS2 needs something playing into it to be clocked |
+| **uplink inputs read SIFS0** (`NSRC0 = NSRC1 = SIFS0`), playback left alone | **replies heard on the other phone** | SIFS0 is the earpiece mix, always clocked in a call; costs an echo, because SIFS0 also holds the downlink |
+
+Final: switch only while a reply is spoken. `/proc/asound/card0/pcm0p/sub0/status` shows `RUNNING` while RDMA0 plays.
+Text call mutes the uplink (`setMicrophoneMuted(true)` -> `voice_set_mic_mute` -> `AudioRil setTxMute`); undo it as root with
+`service call audio 46 i32 0 s16 com.android.shell i32 0 s16 ""` (IAudioService.setMicrophoneMute; 43 = isMicrophoneMuted.
+The numbers are build-specific: read `TRANSACTION_*` from `framework.jar`'s `IAudioService$Stub` static values, and note that
+dex `null`/`boolean` static values carry no payload bytes, or every later number is wrong).
+
+Magisk module `textcall_uplink` (service.sh + a static tinymix), loop during a call every 100 ms:
+```
+RDMA0 RUNNING and mic muted (= Text call)  -> setMicrophoneMute(false); ABOX NSRC0 = NSRC1 = SIFS0
+RDMA0 idle for 0.4 s                        -> ABOX NSRC0 = NSRC1 = UAIF0; setMicrophoneMute(true)
+```
+Gating on "mic muted" keeps normal calls untouched (a normal call never has the mic muted). Verified on 3 calls: Text call
+replies read on the other phone, their speech still transcribed, echo only while a reply plays, normal call unchanged.
+`abox_pos.ko` and the RDMA8 pacer are not needed for this; they are only for playing your own audio stream into a call.
+Daemon detail: `ps -A -o PID,PPID,S,NAME` shows its `sleep` child; reading `/proc/*/status` PPid from a quoted `su -c` line
+missed it and made a healthy loop look stuck.
 
 ## Galaxy Store apps that do work
 
@@ -786,7 +809,7 @@ Three times something looked "impossible" or "the dev's problem" and wasn't. Wha
 | --- | --- | --- | --- |
 | Settings > Language packs empty | "Galaxy AI needs the newer NPU, impossible on S10" | The user found **ExtremeROM issue #462** (S20 Ultra, same symptom, fixed by "installed TTS pack"). That led to logging the Settings screen: `com.samsung.android.intellivoiceservice does not exist` | Installed the missing app, full list, packs download, voice typing works |
 | Text call: caller hears nothing, audioserver crashes | "ROM bug, keep Text call off, report it" | No public report, so traced it: the app's dex (what it plays), the tombstone, then `llvm-objdump` on the crashing library at the exact address. Found the `VOICE_TX` branch and a null `TELEPHONY_TX` lookup | Uplink proven impossible by the HAL's own log (`un-supported output`), and a one-instruction patch stopped the crash, so Live translate stays up |
-| Text call replies never reach the caller | "S10 audio HAL can't, impossible" | User asked to search what others know: found **gsm2sip** (same SoC, injects into the ABOX DSP); copied its routing + kernel module, and ran every test as an on-phone script because adb drops during calls | A tone played into a live call reached the other phone |
+| Text call replies never reach the caller | "S10 audio HAL can't, impossible" | User asked to search what others know: found **gsm2sip** (same SoC, injects into the ABOX DSP); copied its routing + kernel module, and ran every test as an on-phone script because adb drops during calls | A tone played into a live call reached the other phone; then Text call replies themselves (uplink reads SIFS0 while RDMA0 plays, undo the TX mute) |
 | Call history transcript button does nothing | (it looked dead) | Logged the tap: `ActivityNotFoundException ... CallAssistViewerActivity` | Installed Call Services, transcripts open |
 
 How to work a stuck problem on a port ROM (in order):

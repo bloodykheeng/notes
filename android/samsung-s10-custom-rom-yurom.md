@@ -596,6 +596,18 @@ Stopping the crash (the uplink still can't work). The branch is guarded by a tag
 Patch one instruction so every track takes the normal path: file offset 0x7a2b8 (vaddr == offset in this lib),
 `00 0b 00 35` (cbnz) -> `58 00 00 14` (`b 0x7a418`, imm26 = (0x7a418-0x7a2b8)/4 = 0x58). Shipped as a Magisk module replacing
 `/system/lib64/libaudiopolicymanagerdefault.so` with `set_perm ... u:object_r:system_lib_file:s0` in customize.sh.
+Why the other side then hears **nothing at all** (not even your real voice): in Text call and Live translate,
+Samsung mutes your microphone on purpose, so only the synthesized voice goes up, and that voice can't be sent on the S10.
+Live translate settings live in `Settings.System` (keys found as strings in InCallUI's dex):
+```bash
+adb shell settings put system translate_during_calls_mute_my_voice 0      # the other side hears your real voice
+adb shell settings put system translate_during_calls_mute_other_voice 0
+adb shell settings put system translate_during_calls_my_language en-US    # what YOU speak
+adb shell settings put system translate_during_calls_your_language de-DE  # what THEY speak
+```
+(Check them first: here "my language" had been left on `de-DE`, so speaking English was recognised as German.) Text call has no
+unmute option (by design you don't speak), so use a normal call on the S10.
+
 After the reboot audioserver stays up and no tombstones appear. Tested in calls: Live translate and Text call no longer drop the audio; the translated / typed replies are spoken on the S10's own speaker, and the other side hears only the real voice (the HAL limit). Remove the module before updating the ROM.
 
 Reading tombstones: `adb shell su -c 'grep -m1 "#00 pc" /data/tombstones/tombstone_NN'`.

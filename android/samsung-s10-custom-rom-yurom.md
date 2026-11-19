@@ -531,13 +531,28 @@ a matching `34df0e7a...` proves the file came from Samsung, since only Samsung h
 | Photo Editor 3.8.11.30 | `com.sec.android.mimage.photoretouching` | works (Gallery > Edit) |
 | Samsung TTS 3.5.02.31 (voice styles) | `com.samsung.SMT` (`sharedUserId=android.uid.system`) | loads, becomes default TTS |
 | Semantic Core 6.0.50.22 (636 MB) | `com.samsung.android.ssco` | loads |
-| Language Core 4.1.20.28 (3 GB, the language packs) | `com.samsung.android.offline.languagemodel` | **impossible**: `INSTALL_FAILED_MISSING_SHARED_LIBRARY ... libenn_user_lib.so` |
+| Intelligence Voice Services 1.3.10.24 | `com.samsung.android.intellivoiceservice` | **fills Settings > Language packs** (see below) |
+| Language Core 4.1.20.28 (3 GB, on-device AI language model) | `com.samsung.android.offline.languagemodel` | **impossible**: `INSTALL_FAILED_MISSING_SHARED_LIBRARY ... libenn_user_lib.so` |
 
 `libenn_user_lib.so` is the Exynos NPU (AI chip) user library (`<uses-native-library required="true">`). The S10 vendor only has
 `libenn_dsp_*`, so the Galaxy AI offline language packs cannot run here. Editing the manifest would break Samsung's signature.
 The S10 does have an NPU, but its vendor uses Samsung's older **EDEN** stack (`libeden_rt.so`, `libeden_ud_npu.so`, `libnpuc_*`).
 Language Core is built for the newer **ENN** stack. Everything Galaxy AI that sits on Language Core goes with it: the language packs list,
 translation voice packs, Live Translate, call screening / Call assist (the call settings show Galaxy Store error **9908**).
+**Correction: the empty Settings > Language packs screen was not the NPU.** Logcat while opening it:
+```
+ScsApi@Feature: dump(), com.samsung.android.intellivoiceservice does not exist
+[LanguagePack]LanguagePackManager: LanguagePack ConfigInfo is null.
+```
+SecSettings builds the list from `com.samsung.android.sdk.scs.ai.asr.Environment.getLangpackConfigInfo()`, which calls the
+content provider of **Samsung Intelligence Voice Services** (`get_langpack_config` -> `langpack_config_json`). YuROM leaves that
+app out. Installing it (APKMirror, platform key, as `/system/app`) makes the full list appear (Arabic, Chinese, Dutch, English
+AU/IN/UK/US, Filipino, ...). Installed TTS voices come from `content://com.samsung.SMT.LanguageProvider` (Samsung TTS lists the
+installed `com.samsung.SMT.lang_*` voice packs). The ExtremeROM issue #462 hint ("installed TTS pack from Galaxy Store and they
+started to be displayed") pointed this way. The voice pack APKs (e.g. `com.samsung.SMT.lang_en_au_m00`) are signed with a
+separate Samsung store key and install as normal apps.
+Finding a missing provider: open the screen, `adb logcat | grep -i -E "LanguagePack|ScsApi"`, then walk the class with a dex lister.
+
 ExtremeROM does not bundle Language Core either. Its framework hook (`unica/mods/knoxpatch`, SamsungPropsHooks) only reports
 model SM-S721B to a few Samsung apps (Health, Find My Mobile, Routines, ...).
 

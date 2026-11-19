@@ -568,7 +568,7 @@ F/libc (audioserver): Fatal signal 11 (SIGSEGV) ... fault addr 0x90   Cause: nul
   #00 libaudiopolicymanagerdefault.so android::AudioPolicyManager::getOutputForAttrInt(...)
   #04 audioserver android::AudioFlinger::createTrack(...)
 ```
-Every typed reply makes audioserver crash and restart (one tombstone each in `/data/tombstones`), so the reply is never
+Same on the earpiece without Bluetooth (5 crashes in one call), so it is not a Bluetooth issue. Every typed reply makes audioserver crash and restart (one tombstone each in `/data/tombstones`), so the reply is never
 injected into the call and the call-audio capture for transcription breaks too. The S25-based audio policy code and the
 S10 vendor `audio_policy_configuration.xml` (which does declare `incall_music_uplink -> Telephony Tx`) do not fit for this
 track. Reported to the dev. Reading tombstones: `adb shell su -c 'grep -m1 "#00 pc" /data/tombstones/tombstone_NN'`.

@@ -586,6 +586,17 @@ Root cause, traced to the instruction:
   primary / deep buffer / fast / offload / mmap / aux / multichannel playback streams. So playing audio into the call
   uplink is impossible on the S10's audio HAL. The ROM should hide Text call or null-check that lookup; keep it off.
 
+Stopping the crash (the uplink still can't work). The branch is guarded by a tag compare:
+```
+7a2b4: bl   strcmp            ; strcmp(attr.tags, "VOICE_TX")   string at 0x202d1
+7a2b8: cbnz w0, 0x7a418       ; not VOICE_TX -> normal path
+       ...                    ; VOICE_TX -> CallAudioManager / TELEPHONY_TX branch -> null deref
+```
+Patch one instruction so every track takes the normal path: file offset 0x7a2b8 (vaddr == offset in this lib),
+`00 0b 00 35` (cbnz) -> `58 00 00 14` (`b 0x7a418`, imm26 = (0x7a418-0x7a2b8)/4 = 0x58). Shipped as a Magisk module replacing
+`/system/lib64/libaudiopolicymanagerdefault.so` with `set_perm ... u:object_r:system_lib_file:s0` in customize.sh.
+After the reboot audioserver stays up and no tombstones appear. Remove the module before updating the ROM.
+
 Reading tombstones: `adb shell su -c 'grep -m1 "#00 pc" /data/tombstones/tombstone_NN'`.
 
 Finding a missing provider: open the screen, `adb logcat | grep -i -E "LanguagePack|ScsApi"`, then walk the class with a dex lister.

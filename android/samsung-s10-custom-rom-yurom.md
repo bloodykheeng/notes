@@ -747,6 +747,18 @@ The module's `service.sh` now follows `logcat -v brief -T 1 -s SCallUI:I` (read 
 call-ended check still run). Verified: Live translate (my language en-US, theirs de-DE, "Mute my voice" off) sends your German
 translation to the other phone and keeps their translation on yours; Text call unchanged. mksh pitfall: `${var##*Name(}`
 inside a `case` arm fails with "no closing quote"; avoid `(` in parameter expansions, and always `sh -n` the script on the phone.
+
+**v3/v4: Bluetooth, and five daemons at once (mistakes worth remembering).**
+- In a Bluetooth call the HAL sets the uplink to the headset: `incall_wb-bt-sco-headset-in` -> `ABOX NSRC0 = NSRC1 = UAIF3`
+  (16-bit, 16 kHz). v1/v2 restored a hard-coded `UAIF0` (phone mic) after every outgoing voice, so the caller heard the phone,
+  not the Oraimo headset. v3 saves the real NSRC0/NSRC1 values first and restores those.
+- Feeding SIFS0 (24-bit) into a call that started on UAIF3 (16-bit) buzzes (the same width rule gsm2sip documents), and
+  setting SIFS0 to 16-bit while speaking broke the headset audio. v4 skips Bluetooth calls (unless the flag file
+  `/data/local/tmp/textcall_uplink.bt` exists for testing), so the headset always works; outgoing translation over BT is open.
+- `kill <pid>` on a mksh script that sits in `logcat | while read` does **not** stop it (and leaves the pipeline's subshell),
+  so each "restart" added another copy: five daemons toggled mute and routing against each other (mic icon flickering,
+  silence, buzz, an emptied log). Fix: `kill -9` every PID (parent, `logcat`, subshell) and verify with
+  `ps -A -o PID,PPID,NAME,ARGS | grep service.sh`; v4 also kills older copies of itself at start (single instance).
 Daemon detail: `ps -A -o PID,PPID,S,NAME` shows its `sleep` child; reading `/proc/*/status` PPid from a quoted `su -c` line
 missed it and made a healthy loop look stuck.
 

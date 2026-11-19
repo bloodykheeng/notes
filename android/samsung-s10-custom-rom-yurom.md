@@ -493,6 +493,46 @@ adb shell 'logcat -d -b main,system,events -v threadtime -t 20000' | grep -E "ST
 whenever the library *loads*, and its fallback ("em library is disabled, will use service") needs the library gone,
 which risks uncaught UnsatisfiedLinkError crashes. Reported to the dev.
 
+## Firmware APKs: "App not installed" = INSTALL_FAILED_REJECTED_BY_BUILDTYPE (fixed for Photo Editor)
+
+The Photo Editor APK from a mirror site (`samsung-photo-editor-3-8-11-30.apk`) failed with "App not installed". `pm install` from
+`/data/local/tmp` (system_server can't read `/sdcard` files: "no access to read file context fuse") gives the real error:
+```
+Failure [-3001: INSTALL_FAILED_REJECTED_BY_BUILDTYPE]
+```
+Searching services.jar for the constant -3001 (`const/16 vX, #-3001`) finds a single method:
+`com.android.server.asks.ASKSManagerService.verifyASKStokenForPackage`. ASKS is Samsung's app-security check. The APK has
+`SEC-INF/buildinfo.xml` with `<APKNAME name="PhotoEditor_AIFull.apk"/>` and `<KEYTYPE name="platform"/>`: it is a firmware
+system app signed with Samsung's **platform key**, and ASKS will not let that be installed as a user app.
+
+Check whether the key matches the ROM:
+```bash
+apksigner verify --print-certs PhotoEditor.apk | grep -m1 SHA-256
+adb pull /system/framework/framework-res.apk && apksigner verify --print-certs framework-res.apk | grep -m1 SHA-256
+# both 34df0e7a... on YuROM (it is built from Samsung firmware, so it keeps Samsung's platform key)
+```
+Same key, so the APK works as a **system app** through a Magisk module:
+```
+photo_editor_system/
+  module.prop
+  system/app/PhotoEditor_AIFull/PhotoEditor_AIFull.apk
+  system/app/PhotoEditor_AIFull/lib/arm64/*.so     # the 72 lib/arm64-v8a libs extracted (extractNativeLibs=true)
+```
+- `/system/app`, not `priv-app`: `ro.control_privapp_permissions=enforce`, and a priv-app with privileged permissions missing
+  from a `privapp-permissions-*.xml` allowlist can stop the phone from booting. Platform-signed apps get signature permissions anyway.
+- Check its `uses-library` entries exist (`saiv` -> `/system/etc/permissions/saiv.xml`) and `minSdkVersion` (35).
+- Result: Gallery > Edit asks for access once, then the full Photo Editor opens. It has no launcher icon (same on stock).
+
+The same route should work for other firmware APKs that YuROM leaves out (Studio, TTS, Tools edge panel, ...),
+as long as they are platform-signed with the same key and their libraries exist.
+
+## Instagram downloads that WhatsApp status refuses ("Couldn't add")
+
+All failing files were **AV1** (`av01`, one VP9). The one that uploaded was **H.264** (`avc1`). Meta encodes most Reels
+in AV1, and the S10 has no AV1 hardware decoder (only the software `c2.android.av1-dav1d.decoder`). Check a file's codec
+without ffprobe by reading the `stsd` box (`ftyp/mdat/moov > trak > mdia > minf > stbl > stsd`; the first 4 bytes after its
+header give `avc1` / `av01` / `vp09` / `hvc1`). Fix: download an H.264 variant, or re-encode (`ffmpeg -i in.mp4 -c:v libx264 -c:a copy out.mp4`).
+
 ## Galaxy Store apps that do work
 
 Good Lock + NavStar install from Galaxy Store, so the store does serve some apps to "S10 + Android 17". Photo Editor, Studio and the language packs it does not. Careful: "compass" apps found by web search are third-party (one had ads and a paywall; `com.ais.compassone.galaxy` is region-locked). **Samsung's compass lives in the Tools edge panel** (Edge panels themselves are in One UI Home here); YuROM leaves out other firmware-only apps by design (INSTALLATION_EN.md: "Quick Share, Routines, Edge panels and similar are not included"). `pm list packages` has no edge/cocktail package at all. ExtremeROM shipped them. They need platform signing, so sideloaded APKs usually fail. Ask the dev to include them.

@@ -759,6 +759,15 @@ inside a `case` arm fails with "no closing quote"; avoid `(` in parameter expans
   so each "restart" added another copy: five daemons toggled mute and routing against each other (mic icon flickering,
   silence, buzz, an emptied log). Fix: `kill -9` every PID (parent, `logcat`, subshell) and verify with
   `ps -A -o PID,PPID,NAME,ARGS | grep service.sh`; v4 also kills older copies of itself at start (single instance).
+- **Live translate's listener loop.** With both NSRC0 and NSRC1 on SIFS0, Live translate kept "typing" by itself even with the
+  phones in different rooms. The HAL opens a "Voice Call TX" capture on PCM 14 = **WDMA2, fed by NSRC1**; Live translate's
+  LOCAL (my speech) recognizer listens there, so it heard its own German voice, translated it and spoke again. A/B test:
+  injection off -> no ghosts; NSRC0 only -> no ghosts but the caller hears nothing (the modem uses NSRC1). The modem and
+  the LOCAL recognizer share NSRC1, so they can't be separated at the NSRC level. The logs tag recognition as
+  `executeSttResults(LOCAL<id>)` / `REMOTE<id>`, and the outgoing voice reuses the LOCAL id (`TextCall@<id>`), so v4 skips
+  utterances whose id came from LOCAL (flag `/data/local/tmp/textcall_uplink.lt` re-enables). Result: Text call replies go
+  to the caller; Live translate works as on stock S10 (one way) without the loop. Open: an AP echo-canceller route
+  (`MCD_TXSE*` with `REFEXT4CH`) might remove the voice from the recognizer's tap.
 Daemon detail: `ps -A -o PID,PPID,S,NAME` shows its `sleep` child; reading `/proc/*/status` PPid from a quoted `su -c` line
 missed it and made a healthy loop look stuck.
 

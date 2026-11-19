@@ -652,6 +652,69 @@ in AV1, and the S10 has no AV1 hardware decoder (only the software `c2.android.a
 without ffprobe by reading the `stsd` box (`ftyp/mdat/moov > trak > mdia > minf > stbl > stsd`; the first 4 bytes after its
 header give `avc1` / `av01` / `vp09` / `hvc1`). Fix in Piko: **Download options > Video variants > 1280x720** gives H.264 and uploads fine; **Download current media** picks the 1080p AV1 copy. Or set an external downloader (YTDLnis, `com.deniscerri.ytdl`, yt-dlp based), or re-encode (`ffmpeg -i in.mp4 -c:v libx264 -c:a copy out.mp4`).
 
+## Playing audio INTO a phone call on the S10 (Exynos 9820 ABOX): the tunnel and the light
+
+Goal: make Text call / Live translate replies reach the other person. Android's way (an `INCALL_MUSIC` output to
+`TELEPHONY_TX`) is impossible here: the exynos9820 HAL refuses it (`requested to open un-supported output`). But the call
+itself runs inside Samsung's **ABOX** audio DSP, and ABOX routing is plain ALSA mixer controls (card 0, `ABOX ...`), so the
+HAL can be bypassed. On 2026-11-19 a 1 kHz tone was played into a live call and the other phone heard it.
+
+### What failed first, and why (so nobody repeats it)
+
+| Try | Why it failed |
+| --- | --- |
+| Add `Telephony Tx` + `incall_music_uplink` to `audio_policy_configuration_sec.xml` | HAL: `requested to open un-supported output (-22)` |
+| Tone into `ABOX VPCMIN_DAI0_B` / `VPCMIN_DAI1`, even replacing `VPCMIN_DAI0_A` | `VPCMIN` is only a side copy for call recording; the voice kept going through |
+| `ABOX NSRC0 = SIFS0/1/2` | only NSRC0 was switched; **NSRC1 still carried the mic**, and nothing was playing into the SIFS |
+| Codec (Madera CS47L93) mixer `AIF1TX1 Input 2 = Tone Generator / AIF1RX` | that run never happened (script timed out), not concluded |
+| Anything inside Text call | Text call calls `setMicrophoneMuted(true)` -> HAL `voice_set_mic_mute` -> `AudioRil setTxMute`, the **modem mutes the whole uplink** |
+| tinyplay / tinycap | the ABOX firmware reports no stream position for WDMA5 (and RDMA8 here) during calls: streams time out after 1 s |
+| tinypcm reading a file with `-q` (real time) | it drops what it can't play now, hits end of file in milliseconds and exits |
+
+### The light: gsm2sip
+
+Searching "inject audio into call Exynos ABOX" found **[pulpoff/gsm2sip](https://github.com/pulpoff/gsm2sip)** (an Android
+GSM-SIP gateway). Its README section ["The Galaxy S10e: past the HAL, through the ABOX"](https://github.com/pulpoff/gsm2sip#the-galaxy-s10e-past-the-hal-through-the-abox)
+and `DeviceProfile.kt` (`exynos9820()`) give the working chain, verified on a live call on the S10e (same SoC):
+```
+agent -> RDMA8 -> SPUS OUT8 -> SIFS2 (24-bit) -> ABOX NSRC0 + NSRC1 (the voice processor's 2 uplink inputs) -> modem
+pacer:  ABOX NSRC4 = SIFS2 -> WDMA5 captured and discarded (a SIFS is only clocked while a capture runs through it)
+```
+Rules found the hard way (theirs, confirmed here): switch **both** NSRC0 and NSRC1; SIFS2 Width 24 (16 buzzes); play ~10 dB
+down; never mute the mic through Android (the HAL mutes the whole uplink); WDMA5/RDMA8 need **`abox_pos.ko`**, a small GPL
+kernel module that reports the DMA positions the firmware doesn't (source: `tools/abox-pos/abox_pos.c`).
+
+### Working recipe on this phone (YuROM, ArtisanKRNL 4.14.356-openela)
+
+`abox_pos.ko` from gsm2sip loads on ArtisanKRNL (vermagic `4.14.356-openela-rc1 SMP preempt mod_unload modversions aarch64`,
+built without symbol CRCs; it checks the vendor struct layout against the device tree and refuses if it doesn't match):
+```bash
+insmod /data/local/tmp/abox_pos.ko rdma=0x100 wdma=0x60     # dmesg: "abox_pos: watching 20 DMAs"
+# during the call:
+tinymix -D 0 set "ABOX SIFS2 Width" 24
+tinymix -D 0 set "ABOX SPUS OUT8" SIFS2;  tinymix -D 0 set "ABOX SIFS2" "SPUS OUT8"
+tinymix -D 0 set "ABOX NSRC4" SIFS2
+touch /data/local/tmp/tone_on
+( while [ -e /data/local/tmp/tone_on ]; do cat tone1k_16k_mono.raw; done ) |   tinypcm play -D 0 -c 2 -r 16000 -b 16 -p 160 -m -w 3000 -d 8 -n 3 -P 17 &      # RDMA8 + pacer WDMA5
+tinymix -D 0 set "ABOX NSRC0" SIFS2;  tinymix -D 0 set "ABOX NSRC1" SIFS2         # the caller now hears the tone
+# undo: NSRC0/1 = UAIF0, rm tone_on, kill tinypcm, NSRC4 = RESERVED, SPUS OUT8 = SIFS0, SIFS2 = "SPUS OUT6", Width 16
+```
+Tools: `tinymix`/`tinyplay`/`tinycap` built from [tinyalsa v2.0.0](https://github.com/tinyalsa/tinyalsa) with the NDK
+(`aarch64-linux-android30-clang -static -Iinclude utils/tinymix.c src/*.c -ldl`); `tinypcm` and `abox_pos.ko` from gsm2sip.
+Copies + SHA256 in `D:\OS\S10 custom rom\call_audio\`.
+
+### Working around adb dropping during calls
+
+On this phone adb goes offline (sometimes "unauthorized") the moment a call starts, and adb over Wi-Fi was blocked by the
+agent's safety check. So every test ran as a **script on the phone**: armed over adb, it waits for the call
+(`tinymix get "ABOX NSRC0 Bridge"` turns On), runs the steps on a timer, restores everything and writes a log that is read
+after replugging. Keep only one armed copy (a helper lists/stops them; never `pkill -f`, it matches its own shell).
+
+### Next (in progress)
+
+Text call: route the HAL's playback RDMA (RDMA0, 2ch 48 kHz) to SIFS2 (`SPUS OUT0 = SIFS2`), run the pacer, switch NSRC0/1, and
+undo Text call's `setTxMute` while it runs. Live translate with "Mute my voice" off has no TX mute.
+
 ## Galaxy Store apps that do work
 
 Good Lock + NavStar install from Galaxy Store, so the store does serve some apps to "S10 + Android 17". Photo Editor, Studio and the language packs it does not. Careful: "compass" apps found by web search are third-party (one had ads and a paywall; `com.ais.compassone.galaxy` is region-locked). **Samsung's compass lives in the Tools edge panel** (Edge panels themselves are in One UI Home here); YuROM leaves out other firmware-only apps by design (INSTALLATION_EN.md: "Quick Share, Routines, Edge panels and similar are not included"). `pm list packages` has no edge/cocktail package at all. ExtremeROM shipped them. They need platform signing, so sideloaded APKs usually fail. Ask the dev to include them.
@@ -723,6 +786,7 @@ Three times something looked "impossible" or "the dev's problem" and wasn't. Wha
 | --- | --- | --- | --- |
 | Settings > Language packs empty | "Galaxy AI needs the newer NPU, impossible on S10" | The user found **ExtremeROM issue #462** (S20 Ultra, same symptom, fixed by "installed TTS pack"). That led to logging the Settings screen: `com.samsung.android.intellivoiceservice does not exist` | Installed the missing app, full list, packs download, voice typing works |
 | Text call: caller hears nothing, audioserver crashes | "ROM bug, keep Text call off, report it" | No public report, so traced it: the app's dex (what it plays), the tombstone, then `llvm-objdump` on the crashing library at the exact address. Found the `VOICE_TX` branch and a null `TELEPHONY_TX` lookup | Uplink proven impossible by the HAL's own log (`un-supported output`), and a one-instruction patch stopped the crash, so Live translate stays up |
+| Text call replies never reach the caller | "S10 audio HAL can't, impossible" | User asked to search what others know: found **gsm2sip** (same SoC, injects into the ABOX DSP); copied its routing + kernel module, and ran every test as an on-phone script because adb drops during calls | A tone played into a live call reached the other phone |
 | Call history transcript button does nothing | (it looked dead) | Logged the tap: `ActivityNotFoundException ... CallAssistViewerActivity` | Installed Call Services, transcripts open |
 
 How to work a stuck problem on a port ROM (in order):

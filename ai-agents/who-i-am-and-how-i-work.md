@@ -182,5 +182,7 @@ Mobile:
      workaround, and write down what remains.
   Only call something impossible with proof (the log line or code that refuses it), and say what you tried.
   Real cases: `android/samsung-s10-custom-rom-yurom.md`, "Lessons".
+- **Posts I publish (XDA, GitHub, forums): link everything.** Every credit, project, issue number and earlier post in a draft
+  gets its URL; no bare names or `#numbers`. Give me the complete post as one copy-paste block, and keep a copy in the project.
 - **Remember across sessions:** when I correct you, save the rule (your memory, or a note like this one) with the
   why, so the next session does not repeat the mistake.

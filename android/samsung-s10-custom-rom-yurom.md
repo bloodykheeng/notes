@@ -560,6 +560,19 @@ one waits (`[processDownload] wait for task finish`); `am force-stop com.android
 packages (Swahili, Luganda/Ganda, Kinyarwanda, Chichewa) are hidden. After this: voice typing works, and Text call can be turned on.
 Call screening still asks for Language Core and fails with 9908.
 
+**Text call: the caller hears nothing (ROM bug, audioserver crash).** Log during a Text call:
+```
+SCallUI: TxAudioSynthesizerProcessor - onStart ... sampleRateInHz: 24000
+SCallUI: TxAudio AudioTrackHelper - init, make AudioTrack
+F/libc (audioserver): Fatal signal 11 (SIGSEGV) ... fault addr 0x90   Cause: null pointer dereference
+  #00 libaudiopolicymanagerdefault.so android::AudioPolicyManager::getOutputForAttrInt(...)
+  #04 audioserver android::AudioFlinger::createTrack(...)
+```
+Every typed reply makes audioserver crash and restart (one tombstone each in `/data/tombstones`), so the reply is never
+injected into the call and the call-audio capture for transcription breaks too. The S25-based audio policy code and the
+S10 vendor `audio_policy_configuration.xml` (which does declare `incall_music_uplink -> Telephony Tx`) do not fit for this
+track. Reported to the dev. Reading tombstones: `adb shell su -c 'grep -m1 "#00 pc" /data/tombstones/tombstone_NN'`.
+
 Finding a missing provider: open the screen, `adb logcat | grep -i -E "LanguagePack|ScsApi"`, then walk the class with a dex lister.
 
 ExtremeROM does not bundle Language Core either. Its framework hook (`unica/mods/knoxpatch`, SamsungPropsHooks) only reports

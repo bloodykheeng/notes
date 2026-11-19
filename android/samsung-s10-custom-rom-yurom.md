@@ -768,6 +768,9 @@ inside a `case` arm fails with "no closing quote"; avoid `(` in parameter expans
   utterances whose id came from LOCAL (flag `/data/local/tmp/textcall_uplink.lt` re-enables). Result: Text call replies go
   to the caller; Live translate works as on stock S10 (one way) without the loop. Open: an AP echo-canceller route
   (`MCD_TXSE*` with `REFEXT4CH`) might remove the voice from the recognizer's tap.
+- **Leftover experiment flags.** After the NSRC0-only test, the command that removed `textcall_uplink.mode` sat behind a
+  `sh -n ... || exit 1` that failed, so it never ran, and Text call silently stayed on NSRC0 (nothing reached the caller).
+  After any experiment, list the flag files (`ls /data/local/tmp/textcall_uplink.*`) and check the log's `mode=` field.
 Daemon detail: `ps -A -o PID,PPID,S,NAME` shows its `sleep` child; reading `/proc/*/status` PPid from a quoted `su -c` line
 missed it and made a healthy loop look stuck.
 

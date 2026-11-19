@@ -607,6 +607,10 @@ adb shell settings put system translate_during_calls_your_language de-DE  # what
 ```
 (Check them first: here "my language" had been left on `de-DE`, so speaking English was recognised as German.) Text call has no
 unmute option (by design you don't speak), so use a normal call on the S10.
+Better translations: Galaxy AI's "Process data only on device" is `settings put system prevent_online_processing 0|1`
+(1 = offline models only). Gemini / Google Translate cannot replace call translation: Android only lets system apps
+capture call audio, and the uplink limit stays anyway. Use Google Translate's Conversation mode face to face (it also
+has Swahili and Luganda, which Samsung's packs don't).
 
 After the reboot audioserver stays up and no tombstones appear. Tested in calls: Live translate and Text call no longer drop the audio; the translated / typed replies are spoken on the S10's own speaker, and the other side hears only the real voice (the HAL limit). Remove the module before updating the ROM.
 

@@ -532,6 +532,7 @@ a matching `34df0e7a...` proves the file came from Samsung, since only Samsung h
 | Samsung TTS 3.5.02.31 (voice styles) | `com.samsung.SMT` (`sharedUserId=android.uid.system`) | loads, becomes default TTS |
 | Semantic Core 6.0.50.22 (636 MB) | `com.samsung.android.ssco` | loads |
 | Intelligence Voice Services 1.3.10.24 | `com.samsung.android.intellivoiceservice` | **fills Settings > Language packs** (see below) |
+| Call Services / CallAssistViewer 18.5.00.154 | `com.samsung.android.callassistant` | **opens Text call / Live translate transcripts** from call history |
 | Language Core 4.1.20.28 (3 GB, on-device AI language model) | `com.samsung.android.offline.languagemodel` | **impossible**: `INSTALL_FAILED_MISSING_SHARED_LIBRARY ... libenn_user_lib.so` |
 
 `libenn_user_lib.so` is the Exynos NPU (AI chip) user library (`<uses-native-library required="true">`). The S10 vendor only has
@@ -603,6 +604,27 @@ Finding a missing provider: open the screen, `adb logcat | grep -i -E "LanguageP
 
 ExtremeROM does not bundle Language Core either. Its framework hook (`unica/mods/knoxpatch`, SamsungPropsHooks) only reports
 model SM-S721B to a few Samsung apps (Health, Find My Mobile, Routines, ...).
+
+### Recipe: a Samsung button or screen does nothing (missing system app)
+
+YuROM leaves out several Samsung system apps. The symptom is a button that does nothing or an empty screen. Find the
+missing package in logcat while tapping it:
+```bash
+adb logcat -c   # then tap the button
+adb logcat -d | grep -E "ActivityNotFoundException|does not exist|Package not found|ScsApi@Feature"
+```
+Seen on this ROM:
+| Symptom | Log line | Missing package (APKMirror name) |
+| --- | --- | --- |
+| Settings > Language packs empty | `ScsApi@Feature: dump(), com.samsung.android.intellivoiceservice does not exist` | Samsung Intelligence Voice Services |
+| Call history: chat/transcript button does nothing | `ActivityNotFoundException ... com.samsung.android.callassistant/...CallAssistViewerActivity` | Call Services (CallAssistViewer) |
+| Gallery > Edit: "App not installed" for Photo Editor | `INSTALL_FAILED_REJECTED_BY_BUILDTYPE` | Samsung Photo Editor |
+
+Then: download the newest **Android 17** build from APKMirror, check `apksigner verify --print-certs` shows the ROM's platform
+cert (34df0e7a...), check `<uses-native-library required="true">` entries exist on the phone, wrap it as `/system/app/<Name>`
+in a Magisk module (ASKS refuses platform-signed APKs as user apps), reboot. Some activities are protected by a Samsung
+permission (CallAssistViewer needs `com.samsung.android.callassistant.permission.TEXT_CALL`), so `am start` from adb reports
+"does not exist"; test from the app that normally opens it.
 
 Helper used: a small script that copies the APK to `system/app/<Name>/<Name>.apk`, extracts `lib/arm64-v8a/*.so` to
 `system/app/<Name>/lib/arm64/`, writes `module.prop` and zips it for `magisk --install-module`.

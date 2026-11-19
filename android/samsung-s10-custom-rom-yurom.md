@@ -571,7 +571,22 @@ F/libc (audioserver): Fatal signal 11 (SIGSEGV) ... fault addr 0x90   Cause: nul
 Same on the earpiece without Bluetooth (5 crashes in one call), so it is not a Bluetooth issue. Every typed reply makes audioserver crash and restart (one tombstone each in `/data/tombstones`), so the reply is never
 injected into the call and the call-audio capture for transcription breaks too. The S25-based audio policy code and the
 S10 vendor `audio_policy_configuration.xml` (which does declare `incall_music_uplink -> Telephony Tx`) do not fit for this
-track. Reported to the dev. Reading tombstones: `adb shell su -c 'grep -m1 "#00 pc" /data/tombstones/tombstone_NN'`.
+track. Reported to the dev.
+
+Root cause, traced to the instruction:
+- InCallUI plays the reply with `AudioAttributes` usage `VOICE_COMMUNICATION` (2), content `SPEECH` (1) and the
+  Samsung tag `VOICE_TX` (found by searching the APK's dex for the log string `init, make AudioTrack`).
+- In `libaudiopolicymanagerdefault.so` (llvm-objdump from the NDK) the Samsung branch ORs
+  `AUDIO_OUTPUT_FLAG_INCALL_MUSIC` (0x10000) and calls `mAvailableOutputDevices.getDevice(AUDIO_DEVICE_OUT_TELEPHONY_TX)`,
+  then reads `[x22,#0x90]` without a null check. That is the `fault addr 0x90`.
+- The config audioserver loads (`dumpsys media.audio_policy` -> `Config source: /vendor/etc/audio_policy_configuration_sec.xml`)
+  has no Telephony Tx.
+- Adding Telephony Tx + an `incall_music_uplink` mixPort with a Magisk overlay makes the policy try it, but the S10
+  HAL answers `adev_open_output_stream: requested to open un-supported output ... error(-22)`. It only has
+  primary / deep buffer / fast / offload / mmap / aux / multichannel playback streams. So playing audio into the call
+  uplink is impossible on the S10's audio HAL. The ROM should hide Text call or null-check that lookup; keep it off.
+
+Reading tombstones: `adb shell su -c 'grep -m1 "#00 pc" /data/tombstones/tombstone_NN'`.
 
 Finding a missing provider: open the screen, `adb logcat | grep -i -E "LanguagePack|ScsApi"`, then walk the class with a dex lister.
 

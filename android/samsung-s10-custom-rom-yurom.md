@@ -523,15 +523,28 @@ photo_editor_system/
 - Check its `uses-library` entries exist (`saiv` -> `/system/etc/permissions/saiv.xml`) and `minSdkVersion` (35).
 - Result: Gallery > Edit asks for access once, then the full Photo Editor opens. It has no launcher icon (same on stock).
 
-The same route should work for other firmware APKs that YuROM leaves out (Studio, TTS, Tools edge panel, ...),
-as long as they are platform-signed with the same key and their libraries exist.
+APKMirror also hosts several of these Samsung system apps, signed with the same platform key. APKMirror checks signatures, and
+a matching `34df0e7a...` proves the file came from Samsung, since only Samsung holds that key. Done the same way (Magisk, `/system/app`):
+
+| App | Package | Result |
+| --- | --- | --- |
+| Photo Editor 3.8.11.30 | `com.sec.android.mimage.photoretouching` | works (Gallery > Edit) |
+| Samsung TTS 3.5.02.31 (voice styles) | `com.samsung.SMT` (`sharedUserId=android.uid.system`) | loads, becomes default TTS |
+| Semantic Core 6.0.50.22 (636 MB) | `com.samsung.android.ssco` | loads |
+| Language Core 4.1.20.28 (3 GB, the language packs) | `com.samsung.android.offline.languagemodel` | **impossible**: `INSTALL_FAILED_MISSING_SHARED_LIBRARY ... libenn_user_lib.so` |
+
+`libenn_user_lib.so` is the Exynos NPU (AI chip) user library (`<uses-native-library required="true">`). The S10 vendor only has
+`libenn_dsp_*`, so the Galaxy AI offline language packs cannot run here. Editing the manifest would break Samsung's signature.
+
+Helper used: a small script that copies the APK to `system/app/<Name>/<Name>.apk`, extracts `lib/arm64-v8a/*.so` to
+`system/app/<Name>/lib/arm64/`, writes `module.prop` and zips it for `magisk --install-module`.
 
 ## Instagram downloads that WhatsApp status refuses ("Couldn't add")
 
 All failing files were **AV1** (`av01`, one VP9). The one that uploaded was **H.264** (`avc1`). Meta encodes most Reels
 in AV1, and the S10 has no AV1 hardware decoder (only the software `c2.android.av1-dav1d.decoder`). Check a file's codec
 without ffprobe by reading the `stsd` box (`ftyp/mdat/moov > trak > mdia > minf > stbl > stsd`; the first 4 bytes after its
-header give `avc1` / `av01` / `vp09` / `hvc1`). Fix: download an H.264 variant, or re-encode (`ffmpeg -i in.mp4 -c:v libx264 -c:a copy out.mp4`).
+header give `avc1` / `av01` / `vp09` / `hvc1`). Fix in Piko: **Download options > Video variants > 1280x720** gives H.264 and uploads fine; **Download current media** picks the 1080p AV1 copy. Or set an external downloader (YTDLnis, `com.deniscerri.ytdl`, yt-dlp based), or re-encode (`ffmpeg -i in.mp4 -c:v libx264 -c:a copy out.mp4`).
 
 ## Galaxy Store apps that do work
 

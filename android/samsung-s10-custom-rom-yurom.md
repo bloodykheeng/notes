@@ -699,6 +699,28 @@ still looped). The ExtremeXT TWRP plus the patched installer is what worked.
 
 ## Lessons
 
+### Don't give up early: what it looked like on this phone
+
+Three times something looked "impossible" or "the dev's problem" and wasn't. What worked each time:
+
+| Looked like | First (wrong) conclusion | What found the real answer | Result |
+| --- | --- | --- | --- |
+| Settings > Language packs empty | "Galaxy AI needs the newer NPU, impossible on S10" | The user found **ExtremeROM issue #462** (S20 Ultra, same symptom, fixed by "installed TTS pack"). That led to logging the Settings screen: `com.samsung.android.intellivoiceservice does not exist` | Installed the missing app, full list, packs download, voice typing works |
+| Text call: caller hears nothing, audioserver crashes | "ROM bug, keep Text call off, report it" | No public report, so traced it: the app's dex (what it plays), the tombstone, then `llvm-objdump` on the crashing library at the exact address. Found the `VOICE_TX` branch and a null `TELEPHONY_TX` lookup | Uplink proven impossible by the HAL's own log (`un-supported output`), and a one-instruction patch stopped the crash, so Live translate stays up |
+| Call history transcript button does nothing | (it looked dead) | Logged the tap: `ActivityNotFoundException ... CallAssistViewerActivity` | Installed Call Services, transcripts open |
+
+How to work a stuck problem on a port ROM (in order):
+1. **Reproduce while logging** (`adb logcat -c`, do it, `adb logcat -d`), plus `/data/tombstones` for native crashes.
+   Grep for `ActivityNotFoundException`, `does not exist`, `Package not found`, `Fatal signal`, `denied`.
+2. **Search the symptom and the exact log line** on XDA, GitHub issues of the ROM *and its parents/siblings*
+   (ArtisanROM, ExtremeROM, UN1CA, also archived and closed issues), Samsung Community, Stack Overflow.
+3. **Compare with a ROM where it worked:** list what it ships (`git/trees/<branch>?recursive=1` via the GitHub API,
+   no clone needed), read its patches and props. Missing system apps are the most common cause on ports.
+4. **Read the code at the failure:** dex string search for the log message, then the method's calls and constants.
+   For native code, the NDK has `llvm-objdump` / `llvm-readelf`.
+5. **Fix what can be fixed,** even if the root cause is hardware: a Magisk module (system app, overlay, patched lib),
+   always reversible, with the original kept. Write the proof when something is truly impossible.
+
 - **Read the installer before guessing.** Every error was one `abort` line in `update-binary` /
   `install.sh`. Grep the message, read the check, and the cause is right there.
 - **Hash the downloads** against the hashes inside the installer before blaming anything else.

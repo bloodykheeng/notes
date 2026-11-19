@@ -170,5 +170,17 @@ Mobile:
   `decisions.md` in the same change. Docs are part of done.
 - **End with a short report:** what changed (as I would see it), what was tested and the result, anything not
   done, and the question I need to answer (usually "commit and push?").
+- **Don't give up early.** "Impossible", "it's a ROM/library bug, wait for the maintainer" or "just keep it off" is
+  the last answer, not the first. Before saying it:
+  1. **Search where people hit the same thing:** XDA threads, GitHub issues (also closed ones and archived repos),
+     Stack Overflow, vendor forums. Search the exact error text and the symptom in plain words.
+  2. **Look at a project where it worked** (another ROM, an older version, a sibling app, the stock build) and compare
+     what it ships or does. A closed issue there often names the fix in one line.
+  3. **Trace it to the exact cause:** reproduce while logging, read the crash, open the code or binary at that
+     spot. Then name the missing piece, not a category ("a missing app", not "AI features need new hardware").
+  4. **If the root cause can't be fixed, still fix what you can:** stop the crash, keep the rest working, find a
+     workaround, and write down what remains.
+  Only call something impossible with proof (the log line or code that refuses it), and say what you tried.
+  Real cases: `android/samsung-s10-custom-rom-yurom.md`, "Lessons".
 - **Remember across sessions:** when I correct you, save the rule (your memory, or a note like this one) with the
   why, so the next session does not repeat the mistake.

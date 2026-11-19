@@ -735,6 +735,18 @@ RDMA0 idle for 0.4 s                        -> ABOX NSRC0 = NSRC1 = UAIF0; setMi
 Gating on "mic muted" keeps normal calls untouched (a normal call never has the mic muted). Verified on 3 calls: Text call
 replies read on the other phone, their speech still transcribed, echo only while a reply plays, normal call unchanged.
 `abox_pos.ko` and the RDMA8 pacer are not needed for this; they are only for playing your own audio stream into a call.
+
+**v2: Live translate too.** Live translate plays two voices on RDMA0: the outgoing translation (must go up) and the incoming
+translation for you (must not). RDMA0 status can't tell them apart, but the in-call app logs every outgoing utterance
+(Live translate reuses the Text call speech engine, so both show as `TextCall@`):
+```
+SCallUI: TxAudioSynthesizerProcessor(TextCall@...) - setSpeakState, SPEAKING   -> uplink = SIFS0, unmute
+SCallUI: TxAudioSynthesizerProcessor(TextCall@...) - onDone                     -> uplink = UAIF0, previous mute back
+```
+The module's `service.sh` now follows `logcat -v brief -T 1 -s SCallUI:I` (read with `read -t 1` so a 45 s watchdog and a
+call-ended check still run). Verified: Live translate (my language en-US, theirs de-DE, "Mute my voice" off) sends your German
+translation to the other phone and keeps their translation on yours; Text call unchanged. mksh pitfall: `${var##*Name(}`
+inside a `case` arm fails with "no closing quote"; avoid `(` in parameter expansions, and always `sh -n` the script on the phone.
 Daemon detail: `ps -A -o PID,PPID,S,NAME` shows its `sleep` child; reading `/proc/*/status` PPid from a quoted `su -c` line
 missed it and made a healthy loop look stuck.
 

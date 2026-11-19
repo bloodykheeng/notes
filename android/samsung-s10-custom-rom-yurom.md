@@ -776,6 +776,13 @@ inside a `case` arm fails with "no closing quote"; avoid `(` in parameter expans
   (started while not injecting) are forwarded. Tested: each translation reached the second phone, typing stops when
   you stop talking, log showed 2 ghosts blocked; Text call unchanged. Flags: `.nolt` (don't forward Live translate),
   `.off` (forward nothing), `.bt` (also act in Bluetooth calls, still buzzes), `.mode n0|n1|both` (experiments only).
+- **v6: Bluetooth works too.** The earlier BT buzz test was contaminated (five daemons). A clean test with format logging:
+  `SIFS0 24bit/48000Hz, UAIF3 16bit/16000Hz, UAIF3 SPK=SIFS2, SIFS2 16bit/16000Hz`. In a Bluetooth call the headset is fed
+  from **SIFS2**, not SIFS0, so the read-aloud is in SIFS2 and SIFS0 is an unrelated 24-bit mix (feeding that = buzz).
+  v6 reads `ABOX UAIF3 SPK` and injects that mix (SIFS2, already 16-bit like the BT uplink): no buzz, Text call and Live
+  translate reach the caller over the Oraimo headset, ghost filter still works. Rule: inject the mix that feeds the active
+  output (`ABOX UAIF0/1 SPK` for phone, `UAIF3 SPK` for BT), and it must match the uplink source's width. BT is on by
+  default; `.nobt` turns it off. WhatsApp/VoIP calls don't use the CP bridge, so the daemon ignores them.
 - **Leftover experiment flags.** After the NSRC0-only test, the command that removed `textcall_uplink.mode` sat behind a
   `sh -n ... || exit 1` that failed, so it never ran, and Text call silently stayed on NSRC0 (nothing reached the caller).
   After any experiment, list the flag files (`ls /data/local/tmp/textcall_uplink.*`) and check the log's `mode=` field.

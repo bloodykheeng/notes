@@ -535,6 +535,11 @@ a matching `34df0e7a...` proves the file came from Samsung, since only Samsung h
 
 `libenn_user_lib.so` is the Exynos NPU (AI chip) user library (`<uses-native-library required="true">`). The S10 vendor only has
 `libenn_dsp_*`, so the Galaxy AI offline language packs cannot run here. Editing the manifest would break Samsung's signature.
+The S10 does have an NPU, but its vendor uses Samsung's older **EDEN** stack (`libeden_rt.so`, `libeden_ud_npu.so`, `libnpuc_*`).
+Language Core is built for the newer **ENN** stack. Everything Galaxy AI that sits on Language Core goes with it: the language packs list,
+translation voice packs, Live Translate, call screening / Call assist (the call settings show Galaxy Store error **9908**).
+ExtremeROM does not bundle Language Core either. Its framework hook (`unica/mods/knoxpatch`, SamsungPropsHooks) only reports
+model SM-S721B to a few Samsung apps (Health, Find My Mobile, Routines, ...).
 
 Helper used: a small script that copies the APK to `system/app/<Name>/<Name>.apk`, extracts `lib/arm64-v8a/*.so` to
 `system/app/<Name>/lib/arm64/`, writes `module.prop` and zips it for `magisk --install-module`.

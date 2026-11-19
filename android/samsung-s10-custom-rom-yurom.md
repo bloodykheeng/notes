@@ -595,7 +595,7 @@ Stopping the crash (the uplink still can't work). The branch is guarded by a tag
 Patch one instruction so every track takes the normal path: file offset 0x7a2b8 (vaddr == offset in this lib),
 `00 0b 00 35` (cbnz) -> `58 00 00 14` (`b 0x7a418`, imm26 = (0x7a418-0x7a2b8)/4 = 0x58). Shipped as a Magisk module replacing
 `/system/lib64/libaudiopolicymanagerdefault.so` with `set_perm ... u:object_r:system_lib_file:s0` in customize.sh.
-After the reboot audioserver stays up and no tombstones appear. Remove the module before updating the ROM.
+After the reboot audioserver stays up and no tombstones appear. Tested in calls: Live translate and Text call no longer drop the audio; the translated / typed replies are spoken on the S10's own speaker, and the other side hears only the real voice (the HAL limit). Remove the module before updating the ROM.
 
 Reading tombstones: `adb shell su -c 'grep -m1 "#00 pc" /data/tombstones/tombstone_NN'`.
 

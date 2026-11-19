@@ -551,6 +551,15 @@ AU/IN/UK/US, Filipino, ...). Installed TTS voices come from `content://com.samsu
 installed `com.samsung.SMT.lang_*` voice packs). The ExtremeROM issue #462 hint ("installed TTS pack from Galaxy Store and they
 started to be displayed") pointed this way. The voice pack APKs (e.g. `com.samsung.SMT.lang_en_au_m00`) are signed with a
 separate Samsung store key and install as normal apps.
+Each language pack is a bundle of Samsung apps fetched through the same stub API as Galaxy Store
+(`vas.samsungapps.com/stub/stubUpdateCheck.as`), and the server does serve them to SM-G973F on Android 17:
+on-device voice input `com.samsung.android.bixby.ondevice.<xx>`, TTS voices `com.samsung.SMT.lang_<xx>_<variant>`,
+translation `com.samsung.android.nmt.apps.t2t.languagepack.en<xx>`. German is about 600 MB. If one download hangs, every later
+one waits (`[processDownload] wait for task finish`); `am force-stop com.android.settings` clears the queue. The full list
+(115 languages) is cached in the voice service's `shared_prefs/common:language_pack_configuration_1.xml`. Languages with no
+packages (Swahili, Luganda/Ganda, Kinyarwanda, Chichewa) are hidden. After this: voice typing works, and Text call can be turned on.
+Call screening still asks for Language Core and fails with 9908.
+
 Finding a missing provider: open the screen, `adb logcat | grep -i -E "LanguagePack|ScsApi"`, then walk the class with a dex lister.
 
 ExtremeROM does not bundle Language Core either. Its framework hook (`unica/mods/knoxpatch`, SamsungPropsHooks) only reports

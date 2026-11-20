@@ -172,6 +172,7 @@ minutes measured), so batch table changes into one build.
   the two gestures fight (it felt slow). Open on one click, and give each row a View action.
 - **Draw small brand marks in code** (`CustomPainter`) when the only logo file is a small PNG: scaled down it looks
   faded; drawn, it is sharp at every size. Ask the client for the vector file for icons and installers.
+- **Scripted edits across many files: start from a clean git tree, and make the script all-or-nothing.** A brace-matching script that crashed halfway had already saved the files before the crash, one of them with a 200-line cut (its parser misread a raw string `r'\'`). Parse raw strings and comments, write nothing until every file parsed, then check `git diff --numstat` for deletions out of proportion before building.
 - **Widget tests with drift:** a screen that writes to the database in `initState` never finishes under the test's
   fake clock. Pump it inside `tester.runAsync`, use `AppDatabase.forTesting(NativeDatabase.memory())`, set a
   desktop `tester.view.physicalSize`, and focus fields with `tester.showKeyboard` (a `tap` outside the 800×600

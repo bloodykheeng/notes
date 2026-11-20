@@ -51,6 +51,8 @@ lib/
   unit tests.
 - **Keep files small**: a screen over ~400 lines is split into widgets; a form is sections, each its own widget. A
   4,000-line file can't be reviewed.
+- **The local database too:** tables and DAOs in files per area with drift's modular generation, never one giant
+  `database.dart` (build_runner must load the whole file at once to generate it).
 
 ## 3. The stack (new apps; check versions on pub.dev at the time)
 
@@ -134,4 +136,5 @@ test for the main flow. Release builds obfuscated (`--obfuscate --split-debug-in
 | Phone layouts stretched on a PC | desktop-first layouts |
 | A fixed id shared by every install | per-tenant data from the server |
 | Polling every 2 s | push signal + slow safety poll |
+| The whole drift database (64 tables, 63 DAOs, ~9,500 lines) in one file: each schema change regenerated ~108,000 lines, using 6 GB of RAM and 20+ minutes on a 16 GB PC | one file per area (`lib/data/tables/`, `lib/data/daos/`) with drift's modular generation, so a change regenerates only its file |
 | Fixing by trial and error across many commits | reproduce, root cause, one tested fix |

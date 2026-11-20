@@ -54,7 +54,7 @@ flowchart TB
   T <-->|"internet"| S
   P <-->|"internet"| S
   O <-->|"internet"| S
-  S -->|"server pushes reports"| D["DHIS2 (national HMIS)"]
+  S -->|"sends the reports the app computed"| D["DHIS2 (national HMIS)"]
   S <--> C["Web console (Next.js)<br/>for us and the client"]
 ```
 
@@ -110,6 +110,15 @@ flowchart LR
 It would need a small Wi-Fi router per facility (some phone hotspots stop devices seeing each other) and a 1 to 2 day
 test on real hardware first. It is not part of Track A's work. The same idea runs in Kolibri, an offline learning platform used in low-resource
 schools.
+
+### DHIS2 reports: the app computes, the server sends
+
+The report figures (033b, 105, 106a...) are **computed in the app, exactly as today**: that code does not move in
+Track A. What changes is only the sending: instead of calling the HMIS directly, the app sends the finished report to
+our server, which adds the facility's own DHIS2 account and orgUnit, sends it (retrying if the HMIS is slow), and keeps
+the HMIS reply for the console. The dataset structure the app needs is fetched through the server too. Because the
+figures come from the device's copy of the facility's data, the app **syncs first** and won't compute on stale data.
+(Moving the computation to the server, from the day's transactions, is Track B.)
 
 ## 4. A device joins (once)
 

@@ -91,7 +91,7 @@ sequenceDiagram
 data bundle is enough (sync sends small text records, not screens; photos are compressed). The field test measures
 the real data use per facility per day.
 
-**Next phase (A2, proposed): the facility hub, so a facility can work for a week without internet.** One PC is the
+**An idea to explore later (not planned): a facility hub, so a facility could work for a week without internet.** One PC is the
 facility's hub: the same app on it also runs a small sync server (written in Dart, nothing extra to install). The other
 PCs and phones on the facility's Wi-Fi **find it automatically** (it announces itself, so no IP addresses to manage)
 and sync with it exactly as with the cloud; the hub sends everything to the cloud whenever it has internet.
@@ -107,8 +107,8 @@ flowchart LR
   H <-->|"internet, when there is some"| S[("Cloud server")]
 ```
 
-It needs a small Wi-Fi router per facility (some phone hotspots stop devices seeing each other) and starts with a
-1 to 2 day test on real hardware. The same idea runs in Kolibri, an offline learning platform used in low-resource
+It would need a small Wi-Fi router per facility (some phone hotspots stop devices seeing each other) and a 1 to 2 day
+test on real hardware first. It is not part of Track A's work. The same idea runs in Kolibri, an offline learning platform used in low-resource
 schools.
 
 ## 4. A device joins (once)

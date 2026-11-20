@@ -27,8 +27,8 @@ First decide **which features are offline at all**: [../ai-agents/offline-and-on
 - **Never a server per site** (Laragon + MySQL on the facility LAN): nobody can install or support it at 40 sites.
   One server we run, reached over the internet; devices sync when they have data. **Say it plainly to the client:
   devices share work only through the server**, so desks on the same Wi-Fi without internet do not see each other's
-  new records until the internet returns; each site needs one internet source (a local relay inside the app is the
-  option if outages are long).
+  new records until the internet returns; each site needs one internet source (a hub inside the app that relays between
+  desks on the local Wi-Fi is an idea to explore if outages are long; see Kolibri's peer sync).
 - **The sync protocol that worked** (Zed, MRDRS, Jul to Sep 2026):
   - ids made on the device (§2), upsert by id on the server;
   - the pull cursor (`since`) stamped from the **server's clock** (`server_time` returned by the change probe),

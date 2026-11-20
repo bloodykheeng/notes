@@ -156,6 +156,12 @@ Sources: [Windows push notifications overview](https://learn.microsoft.com/en-us
   optional update offers Update now, a version below the minimum must update before syncing. Windows runs the
   downloaded installer; Android opens the APK. The `upgrader` package only knows the stores.
 - **One release script** builds both, uploads, and registers the release. Send `X-App-Version` on every call.
+- **A fresh Windows build machine:** Flutter SDK + Visual Studio (2022) with the C++ desktop workload (`flutter doctor`).
+  If `flutter build windows` fails in a plugin's CMake with *"Failed to install nuget package
+  Microsoft.Windows.CppWinRT"* and *"Argument cannot be null or empty, Parameter name: primarySources"*, the user's
+  `%APPDATA%/NuGet/NuGet.Config` lists no package sources: back it up and add
+  `<add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />` under `<packageSources>`
+  (seen with `permission_handler_windows`, MRDRS, Nov 2026).
 
 ## 10. Phones in the field (Planned)
 

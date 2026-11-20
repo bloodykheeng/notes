@@ -165,6 +165,8 @@ inside packages. Only `flutter test` or a build caught it. The fix was `font_awe
 - Read a package's breaking changes before a major bump, and search for the old usage across lines (a pattern split
   over two lines escapes a one-line grep).
 
+Every build error seen so far, with its fix: [flutter-build-troubleshooting.md](flutter-build-troubleshooting.md).
+
 ## 8. Repo hygiene
 
 - `.gitignore` covers `build/`, `.dart_tool/`, `*.sqlite`, `*.db`, analyzer/test output files, keystores, `env/*.json`

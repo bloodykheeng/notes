@@ -161,7 +161,8 @@ Sources: [Windows push notifications overview](https://learn.microsoft.com/en-us
   Microsoft.Windows.CppWinRT"* and *"Argument cannot be null or empty, Parameter name: primarySources"*, the user's
   `%APPDATA%/NuGet/NuGet.Config` lists no package sources: back it up and add
   `<add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />` under `<packageSources>`
-  (seen with `permission_handler_windows`, MRDRS, Nov 2026).
+  (seen with `permission_handler_windows`, MRDRS, Nov 2026). All build errors and fixes:
+  [flutter-build-troubleshooting.md](flutter-build-troubleshooting.md).
 
 ## 10. Phones in the field (Planned)
 

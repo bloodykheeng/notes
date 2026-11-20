@@ -164,6 +164,14 @@ minutes measured), so batch table changes into one build.
   `gaplessPlayback: true` plus a thumbnail `cacheWidth` stop it.
 - **Register every new asset in `pubspec.yaml`.** A widget test that pumps the screen catches a missing one
   ("Unable to load asset"); a hand check on an old build does not.
+- **Don't hand-make `Scrollbar(thumbVisibility: true, controller: c)` around a page.** It asserts ("no
+  ScrollPosition attached" / "attached to more than one ScrollPosition") whenever its scroll view is not built (an
+  empty list) or the controller is shared by two scroll views: a red error that flashes on navigation. On desktop
+  the default `ScrollBehavior` already gives every scroll view a scrollbar. One controller, one scroll view.
+- **No `onDoubleTap` to open a record.** Inside a `SelectionArea` a double-click also means "select the word", and
+  the two gestures fight (it felt slow). Open on one click, and give each row a View action.
+- **Draw small brand marks in code** (`CustomPainter`) when the only logo file is a small PNG: scaled down it looks
+  faded; drawn, it is sharp at every size. Ask the client for the vector file for icons and installers.
 - **Widget tests with drift:** a screen that writes to the database in `initState` never finishes under the test's
   fake clock. Pump it inside `tester.runAsync`, use `AppDatabase.forTesting(NativeDatabase.memory())`, set a
   desktop `tester.view.physicalSize`, and focus fields with `tester.showKeyboard` (a `tap` outside the 800×600

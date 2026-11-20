@@ -86,6 +86,32 @@ as its own step.
 - **Money in whole units** (UGX `int`), never `double`.
 - **Balances are derived from movements** (stock, payments), never a column edited on several devices.
 
+### 4a. The local database (drift) done right
+
+Measured on a real project (MRDRS, Nov 2026, 16 GB Windows PC): the whole drift database (64 tables, 63 DAOs) in one
+9,466-line file regenerated ~108,000 lines in one go: **build_runner held 6.1 GB of RAM, ran 28+ CPU minutes and
+never finished**, the PC paged to disk (memory 92%, disk 100%). After splitting by area with modular generation,
+the same first full build ran at **2.6 GB**, and later builds regenerate only the files that changed.
+
+- **One file per area, never one giant `database.dart`:** tables in `lib/data/tables/<area>.dart`, one DAO per file in
+  `lib/data/daos/<name>_dao.dart`, barrels (`tables.dart`, `daos.dart`) re-exported by the database file so the rest
+  of the app keeps one import.
+- **Modular generation** (`build.yaml`: `drift_dev` off, `drift_dev:analyzer` + `drift_dev:modular` on): each file
+  gets its own `<file>.drift.dart`; the database `extends $AppDatabase`, a DAO `with $NameDaoMixin` and imports its
+  own `.drift.dart`. (https://drift.simonbinder.eu/generation_options/modular/)
+- **Migrations are cumulative and tested:** `if (from < N)` for every step (an `if (from == N)` chain silently skips
+  steps on a device that jumps versions); use drift's migration tooling (schema snapshots and generated migration
+  tests, see drift's "Migrations" docs) so each version upgrade is proven before release.
+- **Queries live in DAOs**, never in screens; screens call a repository or DAO method.
+- **Run build_runner alone** on a modest PC (close browsers), `--low-resources-mode` if memory is short, and
+  `dart run build_runner watch` while editing tables so each change is a small incremental build.
+- **Keep drift current** (read the changelog before a major); generated code from an old drift can be slower and miss
+  fixes.
+- **Weighed and rejected for a relational offline app:** plain SQL with hand mapping (no type safety; a rewrite of every
+  DAO), Isar and Hive (not relational, original maintainers left; community forks only), ObjectBox (not SQL), Realm
+  (its sync service deprecated). PowerSync (with drift) is worth a look when choosing a sync service. (From knowledge
+  as of Nov 2026; verify online before choosing.)
+
 ## 5. Permissions, errors, forms
 
 - **One permission service** (`can('record-payment')`), loaded at sign-in and on sync; screens ask it. Never paste

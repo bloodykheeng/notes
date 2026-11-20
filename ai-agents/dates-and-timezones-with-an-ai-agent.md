@@ -121,6 +121,17 @@ timezone-free: leave them alone.
     counts the 31st's invoices in November. A calendar date takes a business day (`'2026-11-01'`). Make the guard test
     fail on it (a UTC `21:00:00`/`20:59:59` bound to a `DATE` column), and prove it by planting one.
 
+16. **A Flutter app that works out "today" or "this month" in the device's zone.** `DateTime(year, month, 1)` and
+    `DateTime.now().day` follow the PC's or phone's timezone setting. A fresh Windows install is often not on
+    East Africa Time, so visits between 00:00 and 03:00 land on the wrong day and DHIS2 month edges move (MRDRS,
+    20 Nov 2026, found in review). Compute business days with a fixed-offset helper (Uganda is +3 all year) and
+    show a banner when the device's zone or clock is wrong. Detail:
+    [../flutter/flutter-offline-desktop-and-mobile.md](../flutter/flutter-offline-desktop-and-mobile.md) §3.
+17. **An agent planned a sync API without the session pin** (MRDRS, 20 Nov 2026): the project's
+    `config/database.php` had no `timezone` key and every synced table used `timestamps()`; the agent wrote a whole
+    plan before reading this note, and the user had to remind it. Trap 7 applies to **every** Laravel + MySQL
+    project you open, including one somebody else started: check `config/database.php` on day one.
+
 ## 4. How to check a whole app
 
 0. **Start from the migrations** (the user's method, 09/11/2026, and the right one): list every `date`,

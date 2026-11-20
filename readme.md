@@ -28,12 +28,35 @@ Every note is written to be followed top to bottom and copy-pasted.
   project (`project-inbox/alpha/`, `sds/`, `letshego/`...). Inside a project, say "check coding-notes for lessons":
   its agent applies what holds, then moves the note into that project for history.
 
+## Read before you touch
+
+**For the AI agent.** Before you give a view, write a plan or change code on any of these, open the note on the
+right. Not after I remind you: if it is written here, you are expected to know it.
+
+| If the work touches... | Read first |
+| --- | --- |
+| Any project at all | [who-i-am-and-how-i-work.md](ai-agents/who-i-am-and-how-i-work.md), then the project's own `CLAUDE.md` and `docs/decisions.md` |
+| **Dates, times, timezones, "today", reports by day or month, MySQL timestamps** (session timezone pin!) | [dates-and-timezones-with-an-ai-agent.md](ai-agents/dates-and-timezones-with-an-ai-agent.md) |
+| Models, migrations, statuses, foreign keys | [enums-and-migrations.md](ai-agents/enums-and-migrations.md), and the FK rules in [build-laravel-nextjs-app-with-an-ai-agent.md](ai-agents/build-laravel-nextjs-app-with-an-ai-agent.md) |
+| Editable data that other records use (prices, schedules, standards) | [master-copy-and-snapshots.md](ai-agents/master-copy-and-snapshots.md) |
+| Audit trail | [audit-trail-with-snapshot-schemas.md](ai-agents/audit-trail-with-snapshot-schemas.md) |
+| A Laravel + Next.js build: roles and permissions, lists, dialogs, Reverb, notifications, reports | [build-laravel-nextjs-app-with-an-ai-agent.md](ai-agents/build-laravel-nextjs-app-with-an-ai-agent.md), [letshego-field-sales-lessons.md](ai-agents/letshego-field-sales-lessons.md) |
+| **A Flutter app** (Windows desktop or Android), offline sync, device time, installers, push | [flutter/flutter-engineering-standards-for-agents.md](flutter/flutter-engineering-standards-for-agents.md) (how to work, structure, stack, quality gate), [flutter/flutter-offline-desktop-and-mobile.md](flutter/flutter-offline-desktop-and-mobile.md), [mrdrs-lessons.md](ai-agents/mrdrs-lessons.md) |
+| **A client says "offline"**, or users with unreliable internet | [offline-and-online-explaining-to-clients.md](ai-agents/offline-and-online-explaining-to-clients.md) |
+| A system for many sites, offline, several users per site | [mrdrs-lessons.md](ai-agents/mrdrs-lessons.md), [offline-and-online-explaining-to-clients.md](ai-agents/offline-and-online-explaining-to-clients.md) |
+| Firebase push (web or Android) | [nextjs/firebase-messaging-sw-and-nextauth-google.md](nextjs/firebase-messaging-sw-and-nextauth-google.md), [nextjs/firebase-push-token-errors-check-versions-first.md](nextjs/firebase-push-token-errors-check-versions-first.md) |
+| Reverb on a server | [nginx/laravel-reverb-production-nginx.md](nginx/laravel-reverb-production-nginx.md) |
+| A deploy or redeploy | [deploy-with-an-ai-agent.md](ai-agents/deploy-with-an-ai-agent.md) or [deploy-yourself-over-ssh.md](ai-agents/deploy-yourself-over-ssh.md) |
+| Security patching PHP / Node | [security/patch-php-node-with-an-ai-agent.md](security/patch-php-node-with-an-ai-agent.md) |
+
 ## Contents
 
 ### ai-agents
 | Note | What it covers |
 | --- | --- |
 | [who-i-am-and-how-i-work.md](ai-agents/who-i-am-and-how-i-work.md) | Read first, every project: me, how to read my messages, how decisions are made and recorded, what decides (and what does not), project setup, the "professional not vibe-coded" bar, the rules I keep repeating (data, API, lists, dialogs, forms, dashboards, reports, maps, mobile), and how to work in a session |
+| [offline-and-online-explaining-to-clients.md](ai-agents/offline-and-online-explaining-to-clients.md) | "We want it fully offline": what clients really mean (work must not stop, data costs money, distrust of the internet), the connectivity spectrum (fully offline, local-first, offline-capable with sync, online-first with fallback, online-only), classifying every feature into offline OK / offline confirmed by the server / online only, the hidden costs of offline, anti-patterns, a plain-words script for the client, and a checklist |
+| [mrdrs-lessons.md](ai-agents/mrdrs-lessons.md) | MRDRS (Nov 2026): a facility records + DHIS2 app that grew from one user to many facilities without a plan. The mistakes (no deployment design, shared SQLite file, single tenant, report-first screens, unsafe credential handling, roles built by hand, phone layouts on PCs, 2 s polling) with the rule now, what was kept, and the two-track way out |
 | [letshego-field-sales-lessons.md](ai-agents/letshego-field-sales-lessons.md) | The Letshego Field Sales story (Oct–Nov 2026): prototype first, the workspace, the foundation copied from GiftNest, decisions as they were made (client vs customer, stage read never stored, drop as a flag, reach by assignment), a table of the mistakes an agent made with my correction and the rule now, the patterns worth reusing (list memory for Back, card arrows, report scope, timeline from facts) and the process lessons |
 | [build-laravel-nextjs-app-with-an-ai-agent.md](ai-agents/build-laravel-nextjs-app-with-an-ai-agent.md) | The playbook for an AI agent building a Laravel + Next.js business app with me: how we work (facts first, search best practice online, root cause, tests and docs with every change), folders, backend conventions (ULIDs, serial counters, enums, money, UTC, migrations, files), the maker/checker approval engine, roles and permissions, sessions and the portal cache bug, lists (pagination, URL state, 3-state sort, chips, one filter form, skeletons, typed exports), dialogs and forms, help text, documents, audit trail, Reverb realtime, reports, packages, testing and docs |
 | [dates-and-timezones-with-an-ai-agent.md](ai-agents/dates-and-timezones-with-an-ai-agent.md) | Dates done right in Laravel + Next.js + a mobile app: store and query UTC, "a day" from one business timezone, bare date = whole day and a time = exact; the column kinds (UTC instant vs calendar date); the traps that were live in production (Laravel binds a Carbon without converting its timezone, an end date that drops the last day, `whereDate`/`DATE()` on UTC columns, browser `new Date("YYYY-MM-DD")`, pickers that discard the time, MySQL TIMESTAMP and the DB session timezone, uncast datetime columns, Carbon's month overflow, caches); how to check a whole app (golden master, a `DB::pretend()` guard test, a real-data detector, tallies of dashboard figures against the lists they link to, static sweeps); and the method mistakes an agent made on NICE, so the next one does not |
@@ -120,6 +143,17 @@ Every note is written to be followed top to bottom and copy-pasted.
 | Note | What it covers |
 | --- | --- |
 | [samsung-s10-custom-rom-yurom.md](android/samsung-s10-custom-rom-yurom.md) | Galaxy S10 (SM-G973F) from ExtremeROM to YuROM Ultra (Android 17): official TWRP bootloop, the installer's busybox and exact-vendor-size checks patched (hash chain rebuilt), f2fs to ext4 data, installing and verifying over adb, the 5-6 restart first boot, Magisk root, a custom first-screen logo in `up_param`, why the QMG boot animation is mis-scaled, and a Magisk module that clears `/data/apex/active` after 3 failed boots; the missing region (CSC/OMC) fixed (optics/prism mounts + Magisk props, `mdc.system.path`) to bring back call recording, decoding Samsung's encrypted `cscfeature.xml`, and the QS mobile-data tile traced to telephony publishing active data sub -1 |
+
+### flutter
+| Note | What it covers |
+| --- | --- |
+| [flutter-engineering-standards-for-agents.md](flutter/flutter-engineering-standards-for-agents.md) | The bar for any agent on our Flutter apps ("don't gamble"): facts and official docs before patterns, `flutter pub add` at latest, spike risky plugins, root cause not trial and error, one way of doing each thing; feature-first structure with thin screens; the stack (Riverpod 3, go_router, dio, freezed, drift, flavours); one sync engine and one permission service; desktop-first screens; the quality gate (format, analyze, test, real device); repo hygiene; the anti-patterns seen on MRDRS |
+| [flutter-offline-desktop-and-mobile.md](flutter/flutter-offline-desktop-and-mobile.md) | Flutter apps that run on Windows PCs and Android phones, offline, syncing to a Laravel API: local store + outbox + server (never a shared SQLite file), ids made on the device (UUID v7), dates on the device (UTC on the wire, a fixed-offset business day, a wrong clock/zone banner), device enrolment and tokens, Reverb from Dart, Firebase (no FCM on Windows), desktop-first layouts, permissions in one place, installers and in-app updates, Android release, phone data costs, and what went wrong on MRDRS |
+
+### architecture
+| Note | What it covers |
+| --- | --- |
+| [mrdrs-track-a-architecture.md](architecture/mrdrs-track-a-architecture.md) | MRDRS Track A in plain words, for the team: one cloud server and one database for 40+ facilities, devices enrolled with a code, sync (what stays, what is new), Reverb signals, offline vs online per feature, ready-made roles, notifications by platform, dates and ids, the file structure of the API, the Flutter app and the console, how we work together |
 
 ### claude-code
 | Note | What it covers |

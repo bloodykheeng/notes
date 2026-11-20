@@ -52,7 +52,11 @@ follow this, I should not have to repeat myself.
 4. **Record it** the same turn in the workspace's `docs/decisions.md`: date, the decision, why (with my words in
    quotes), and where the detail lives. Big rounds of change get their own plan file (`docs/plan-<topic>.md`: the
    decisions table, the steps with status, what the mobile app gets, what was left out and why), kept current.
-5. **Build in dependency order, MVP core first.** No side modules, no frameworks for one value: a setting lives
+5. **When a client says "offline", ask what they mean and classify every feature** (offline OK / offline confirmed
+   by the server / online only) before designing anything: almost no business app is "fully offline"
+   ([offline-and-online-explaining-to-clients.md](offline-and-online-explaining-to-clients.md); MRDRS was built on
+   "offline" read as "no server").
+6. **Build in dependency order, MVP core first.** No side modules, no frameworks for one value: a setting lives
    where it belongs (a column on the row it governs, a constant), never a "settings module" ("storage... are you
    serious").
 
@@ -120,6 +124,10 @@ Data and API:
   step names decides.
 - Money in whole units (UGX integers); times stored UTC, "a day" in the business timezone; phones as digits with
   the country code.
+- **Every Laravel + MySQL connection is pinned to UTC** (`'timezone' => env('DB_TIMEZONE', '+00:00')` on mysql and
+  mariadb in `config/database.php`). `APP_TIMEZONE=UTC` alone does not do it: `TIMESTAMP` columns follow the MySQL
+  session zone, which defaults to the server's. Check it in every project you open, old or new
+  ([dates-and-timezones-with-an-ai-agent.md](dates-and-timezones-with-an-ai-agent.md) trap 7).
 
 Lists and screens:
 - **Every list is the standard table**: server paging (5 per page), rows-per-page, skeleton, search, one Filters
@@ -162,6 +170,12 @@ Mobile:
 
 ## 8. How to work in a session
 
+- **Read the notes for the topic before proposing anything on it.** The readme's
+  [Read before you touch](../readme.md#read-before-you-touch) table maps each kind of work (dates, models and
+  migrations, roles, audit, realtime, Flutter, offline sync, deploys) to the note to open first. Open it **before**
+  you give a view or write a plan, not after I remind you. If it is written down, I expect you to know it. (MRDRS,
+  20 Nov 2026: an agent planned a whole sync API without the MySQL session timezone pin that the dates note
+  documents, and I had to point at it.)
 - **Facts before code:** read the code, docs and data; grep, never guess a column or route. Next.js and Laravel are
   newer than your training: read the installed docs.
 - **Test what changed while working** (the filtered test, the touched browser spec, type check, lint); the full

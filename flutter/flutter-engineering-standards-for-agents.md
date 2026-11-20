@@ -141,6 +141,34 @@ minutes measured), so batch table changes into one build.
   "no more" states. Never an endless spinner.
 - Check with screenshots at 1536×745 and 1920×1080, light and dark, with realistic data, and on a phone.
 
+### 6a. Theme lessons from a real restyle (Nov 2026)
+
+- **`ColorScheme.fromSeed` makes pastels by default** (`DynamicSchemeVariant.tonalSpot`). The client said the app
+  "looks like paper, pale". Use `dynamicSchemeVariant: DynamicSchemeVariant.fidelity` to keep the seed as the
+  primary, and set `primary` / `onPrimary` yourself for dark mode if the generated one is too dull.
+- **Find the colour helper everyone calls.** An old app had `ThemeColors.accentColor(context)` returning
+  `Colors.blue` in 2,000+ places. Making that one function return `Theme.of(context).colorScheme.primary` restyled
+  most screens at once. Grep for it before touching screens one by one.
+- **Dark mode dies on hard-coded colours.** Count them first (`fillColor: Colors.white`, `TextStyle(color:
+  Colors.black)`, `Colors.blue`...). Remove field fills (the theme's `inputDecorationTheme` fills), replace black
+  text with an empty `TextStyle()`, and map old blues to one const accent. Do it with a script, then
+  `flutter analyze` and a diff of warnings against a saved baseline.
+- **After changing the app bar colour, look for white icons.** A sync button drawn `Colors.white` on a white app bar
+  was invisible for days.
+- **A shell with a nested Navigator: decide where Back belongs.** Pages opened from the sidebar are top level, so the
+  app bar shows no Back (`automaticallyImplyLeading: false` when the route's name is a section id). Only detail
+  pages get Back. Keep the drawer button on narrow screens.
+- **Desktop users expect to select text and open photos.** Wrap the content area in `SelectionArea`; give photos one
+  shared full-screen viewer (`InteractiveViewer`, Save as..., Esc to close).
+- **`Image.memory` in a list flickers** when a stream re-emits rows (a new byte list each time means a new decode).
+  `gaplessPlayback: true` plus a thumbnail `cacheWidth` stop it.
+- **Register every new asset in `pubspec.yaml`.** A widget test that pumps the screen catches a missing one
+  ("Unable to load asset"); a hand check on an old build does not.
+- **Widget tests with drift:** a screen that writes to the database in `initState` never finishes under the test's
+  fake clock. Pump it inside `tester.runAsync`, use `AppDatabase.forTesting(NativeDatabase.memory())`, set a
+  desktop `tester.view.physicalSize`, and focus fields with `tester.showKeyboard` (a `tap` outside the 800×600
+  default window silently misses).
+
 ## 7. Quality gate (before every commit)
 
 ```

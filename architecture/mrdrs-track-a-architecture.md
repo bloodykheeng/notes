@@ -34,23 +34,66 @@ itself**, and it runs on **Windows and Android**. A small **web console** lets u
 
 ## 3. The big picture
 
+**Every device has its own line to the cloud server, and only that line.** Devices never talk to each other
+directly, not even on the same Wi-Fi. The server is where they meet.
+
+```mermaid
+flowchart TB
+  subgraph FA["Facility A (3 PCs and a phone)"]
+    R["Reception PC<br/>app + its own database"]
+    L["Lab PC<br/>app + its own database"]
+    T["Triage PC<br/>app + its own database"]
+    P["Nurse's phone<br/>app + its own database"]
+  end
+  subgraph FB["Facility B, C ... (40+ facilities)"]
+    O["Their PCs and phones<br/>same app"]
+  end
+  S[("Cloud server<br/>Laravel API + Reverb<br/>ONE MySQL database<br/>every row has facility_id")]
+  R <-->|"internet"| S
+  L <-->|"internet"| S
+  T <-->|"internet"| S
+  P <-->|"internet"| S
+  O <-->|"internet"| S
+  S -->|"server pushes reports"| D["DHIS2 (national HMIS)"]
+  S <--> C["Web console (Next.js)<br/>for us and the client"]
 ```
-   Facility A                                   Facility B
-   ┌──────────────┐  ┌──────────────┐           ┌──────────────┐
-   │ Reception PC │  │  Lab PC      │  ...      │ Phone (nurse)│ ...
-   │ app + SQLite │  │ app + SQLite │           │ app + SQLite │
-   └──────┬───────┘  └──────┬───────┘           └──────┬───────┘
-          │ HTTPS: push/pull changes (device token)    │
-          │ WSS: "something changed" (Reverb)          │
-          ▼                                            ▼
-   ┌─────────────────────────────────────────────────────────────┐
-   │  Cloud server: Laravel API + Reverb + queue worker + scheduler│
-   │  MySQL: ONE database, every row carries facility_id          │
-   └───────────────┬───────────────────────────────┬──────────────┘
-                   │                               │
-         DHIS2 (national HMIS)              Web console (Next.js)
-         pushed by the server               for us and the client
+
+Each arrow carries two things: **HTTPS** (the device pushes its unsent changes and pulls the facility's new ones,
+with its device token) and a **WebSocket** to Reverb (the server says "something changed in your facility").
+
+### Example: the phone registers a patient
+
+```mermaid
+sequenceDiagram
+  participant Phone as Nurse's phone
+  participant Server as Cloud server
+  participant PCs as Reception, Lab, Triage PCs
+  Phone->>Phone: saves the patient in its own database (works with no internet)
+  Note over Phone: top bar shows "1 waiting"
+  Phone->>Server: uploads as soon as it has internet
+  Server->>Server: stamps facility_id, saves
+  Server-->>PCs: "facility changed" (Reverb, about a second)
+  PCs->>Server: pull the changes
+  Server-->>PCs: the new patient
+  Note over PCs: the patient now shows on every PC of the facility
 ```
+
+### What each device sees, by network
+
+| The facility's network | Do the PCs see the phone's new patient? |
+| --- | --- |
+| A Wi-Fi router or hotspot **with internet** (or each device on mobile data) | **Yes, in about 1 to 2 seconds.** |
+| A router or hotspot **without internet** (same Wi-Fi, no data) | **Not yet.** Every device keeps working on its own data; the patient appears on the PCs once the internet is back (the phone uploads, the PCs pull). Being on the same Wi-Fi does not help: devices only talk to the cloud. |
+| The phone has no internet, the PCs do | When the phone next gets data. |
+| Nobody has internet for hours | Each desk works on its own; everything meets up when the internet returns. Nothing is lost. |
+
+**So each facility needs one internet source** for the desks to share work in real time: a router or MiFi with a
+data bundle is enough (sync sends small text records, not screens; photos are compressed). The field test measures
+the real data use per facility per day.
+
+**If a facility often has no internet during working hours**, a later option is a **local relay built into the app**:
+one PC on the facility's Wi-Fi passes changes between the desks while the internet is down, then uploads to the cloud
+(no Laragon, no PHP, nothing to install). It is decided after the field visits show how long outages really last.
 
 ## 4. A device joins (once)
 

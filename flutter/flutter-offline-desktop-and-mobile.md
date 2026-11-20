@@ -25,7 +25,10 @@ First decide **which features are offline at all**: [../ai-agents/offline-and-on
 - **Never share one SQLite file between users** (a network folder, a shared exe): SQLite is one process on one
   machine. MRDRS did this and it locked and crashed.
 - **Never a server per site** (Laragon + MySQL on the facility LAN): nobody can install or support it at 40 sites.
-  One server we run, reached over the internet; devices sync when they have data.
+  One server we run, reached over the internet; devices sync when they have data. **Say it plainly to the client:
+  devices share work only through the server**, so desks on the same Wi-Fi without internet do not see each other's
+  new records until the internet returns; each site needs one internet source (a local relay inside the app is the
+  option if outages are long).
 - **The sync protocol that worked** (Zed, MRDRS, Jul to Sep 2026):
   - ids made on the device (§2), upsert by id on the server;
   - the pull cursor (`since`) stamped from the **server's clock** (`server_time` returned by the change probe),

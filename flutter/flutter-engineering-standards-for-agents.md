@@ -102,6 +102,15 @@ the same first full build ran at **2.6 GB**, and later builds regenerate only th
 - **Migrations are cumulative and tested:** `if (from < N)` for every step (an `if (from == N)` chain silently skips
   steps on a device that jumps versions); use drift's migration tooling (schema snapshots and generated migration
   tests, see drift's "Migrations" docs) so each version upgrade is proven before release.
+- **Every foreign key says what happens on delete** (SQLite's default refuses deleting a parent with children, so a
+  synced tombstone for a parent cannot be applied on a device holding its children): `ON DELETE CASCADE` for parts
+  (bill items → bill), `RESTRICT` written out for references (anything → patient), `SET NULL` only for a disposable
+  link with a comment why; a Dart non-null foreign key also says `NOT NULL` in SQL. Health records are deleted softly
+  and refused in the screens when they have records, never cascaded away. (Found on a real app: 80 foreign keys,
+  none with ON DELETE.)
+- **Dates:** a `DateTimeColumn` stored as Unix time is an instant (keep `store_date_time_values_as_text: false`); a
+  calendar day (date of birth) is written as the business day's start with a fixed-offset helper, never midnight in
+  the device's zone; text dates, where they exist, keep one format (`yyyy-MM-dd`, `HH:mm`) until they can be typed.
 - **Queries live in DAOs**, never in screens; screens call a repository or DAO method.
 - **Run build_runner alone** on a modest PC (close browsers), `--low-resources-mode` if memory is short, and
   `dart run build_runner watch` while editing tables so each change is a small incremental build.

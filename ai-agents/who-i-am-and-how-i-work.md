@@ -73,7 +73,9 @@ follow this, I should not have to repeat myself.
 ## 5. How a project is set up
 
 - **A workspace repo** (instructions, plan, decisions, handoffs) with the app repos inside it, git-ignored, each its
-  own repo: a change across API, web and docs is three commits in three repos.
+  own repo: a change across API, web and docs is three commits in three repos. **If I have the root folder above the
+  workspace open in VS Code**, add a `.vscode/settings.json` there with `git.scanRepositories` listing each repo, or
+  VS Code shows no git colours ([../vscode/git-colours-for-nested-repos.md](../vscode/git-colours-for-nested-repos.md)).
 - **`CLAUDE.md`** at the workspace root: what the system is, where patterns come from (the reference projects and
   what to take from each), the domain as settled, binding conventions, how to verify. Short, linking to docs.
 - **`WORK-PLAN.md`**: phases, the current one, its checklist and stop point. **`docs/decisions.md`** (above).

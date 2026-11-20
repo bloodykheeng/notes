@@ -46,6 +46,7 @@ right. Not after I remind you: if it is written here, you are expected to know i
 | A system for many sites, offline, several users per site | [mrdrs-lessons.md](ai-agents/mrdrs-lessons.md), [offline-and-online-explaining-to-clients.md](ai-agents/offline-and-online-explaining-to-clients.md) |
 | Firebase push (web or Android) | [nextjs/firebase-messaging-sw-and-nextauth-google.md](nextjs/firebase-messaging-sw-and-nextauth-google.md), [nextjs/firebase-push-token-errors-check-versions-first.md](nextjs/firebase-push-token-errors-check-versions-first.md) |
 | Reverb on a server | [nginx/laravel-reverb-production-nginx.md](nginx/laravel-reverb-production-nginx.md) |
+| Setting up a workspace with app repos inside it (git colours in VS Code) | [vscode/git-colours-for-nested-repos.md](vscode/git-colours-for-nested-repos.md) |
 | A deploy or redeploy | [deploy-with-an-ai-agent.md](ai-agents/deploy-with-an-ai-agent.md) or [deploy-yourself-over-ssh.md](ai-agents/deploy-yourself-over-ssh.md) |
 | Security patching PHP / Node | [security/patch-php-node-with-an-ai-agent.md](security/patch-php-node-with-an-ai-agent.md) |
 
@@ -154,6 +155,11 @@ right. Not after I remind you: if it is written here, you are expected to know i
 | Note | What it covers |
 | --- | --- |
 | [mrdrs-track-a-architecture.md](architecture/mrdrs-track-a-architecture.md) | MRDRS Track A in plain words, for the team: one cloud server and one database for 40+ facilities, devices enrolled with a code, sync (what stays, what is new), Reverb signals, offline vs online per feature, ready-made roles, notifications by platform, dates and ids, the file structure of the API, the Flutter app and the console, how we work together |
+
+### vscode
+| Note | What it covers |
+| --- | --- |
+| [git-colours-for-nested-repos.md](vscode/git-colours-for-nested-repos.md) | No git colours or Source Control when I open the root folder above `<project>-workspace/`: VS Code scans one level deep; a root `.vscode/settings.json` with `git.scanRepositories` listing each app repo fixes it (Elevate Pesa, MRDRS). The agent creates it at workspace setup |
 
 ### claude-code
 | Note | What it covers |

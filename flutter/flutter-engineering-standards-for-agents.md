@@ -91,7 +91,9 @@ as its own step.
 Measured on a real project (MRDRS, Nov 2026, 16 GB Windows PC): the whole drift database (64 tables, 63 DAOs) in one
 9,466-line file regenerated ~108,000 lines in one go: **build_runner held 6.1 GB of RAM, ran 28+ CPU minutes and
 never finished**, the PC paged to disk (memory 92%, disk 100%). After splitting by area with modular generation,
-the same first full build ran at **2.6 GB**, and later builds regenerate only the files that changed.
+the same first full build ran at **2.6 GB and finished in 8.5 minutes**. Later builds regenerate only what depends
+on the change: a DAO edit is small, but a **table** edit also regenerates the DAOs and the database that use it (7.5
+minutes measured), so batch table changes into one build.
 
 - **One file per area, never one giant `database.dart`:** tables in `lib/data/tables/<area>.dart`, one DAO per file in
   `lib/data/daos/<name>_dao.dart`, barrels (`tables.dart`, `daos.dart`) re-exported by the database file so the rest
@@ -150,6 +152,18 @@ flutter test
 Plus the changed flow by hand on the real target (Windows build, Android device) against the local API. Unit tests
 for logic (business day, permissions, sync conflicts, report figures), widget tests for screen states, an integration
 test for the main flow. Release builds obfuscated (`--obfuscate --split-debug-info`). CI runs analyze + test + a build.
+
+## 7a. A new Flutter version can break old packages (and the analyzer won't tell you)
+
+On Flutter 3.50, `IconData` became a `final` class, so `font_awesome_flutter` 10.x (which extends it) stopped
+compiling: **the whole app would not build**, yet `flutter analyze` showed nothing, because it does not report errors
+inside packages. Only `flutter test` or a build caught it. The fix was `font_awesome_flutter` 11 (`FaIcon` instead of
+`Icon` for Font Awesome icons; 18 places). Rules:
+
+- After any Flutter upgrade (or a fresh SDK install on a project last built on an older one), **build for each target
+  and run `flutter test`**, not only `flutter analyze`.
+- Read a package's breaking changes before a major bump, and search for the old usage across lines (a pattern split
+  over two lines escapes a one-line grep).
 
 ## 8. Repo hygiene
 

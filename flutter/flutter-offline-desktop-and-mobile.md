@@ -72,7 +72,14 @@ The server rules are in the dates note. On the device:
 5. **A wrong-clock / wrong-zone banner:** compare the device's clock with `server_time` on each sync (over 5 minutes
    off) and check `DateTime.now().timeZoneOffset` is +3 h; otherwise show "Set this computer/phone to East Africa Time
    and the correct time".
-6. **The server side must be pinned too** (`DB_TIMEZONE=+00:00`, dates note trap 7): MRDRS's API had no pin while all
+6. **Four times on every synced record, never mixed up:** `created_at` (made on the device; the server must accept and
+   keep it, or a record made at 8 am and synced at 3 pm reads "created 3 pm" on every device after the next pull),
+   `edited_at` (last edit on a device; "newest edit wins" compares these, device clock with device clock), `synced_at`
+   (first reached the server, with the device it came from), `updated_at` (the server's last change, the pull cursor).
+   All UTC `dateTime`. Show "Registered 8:12 am · Synced 3:05 pm", "Not synced yet" before it reaches the server; count
+   reports by `created_at` or the event's own time. Device times more than a few minutes in the future: clamp to the
+   server's time and log, never refuse.
+7. **The server side must be pinned too** (`DB_TIMEZONE=+00:00`, dates note trap 7): MRDRS's API had no pin while all
    its sync timestamps were MySQL `TIMESTAMP` columns.
 
 ## 4. Devices, sign-in and secrets (Planned)

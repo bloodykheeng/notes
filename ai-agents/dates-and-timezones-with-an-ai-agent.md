@@ -132,6 +132,17 @@ timezone-free: leave them alone.
     plan before reading this note, and the user had to remind it. Trap 7 applies to **every** Laravel + MySQL
     project you open, including one somebody else started: check `config/database.php` on day one.
 
+18. **Records made offline get the SYNC time as their creation time.** The app sent `created_at`, but the API's
+    validation and `$fillable` did not accept it, so Laravel stamped the moment the record arrived, and the next pull
+    wrote that time back onto every device (MRDRS, found 20 Nov 2026 before go-live: a patient registered at 8 am and
+    synced at 3 pm read "created 3 pm"). The same code compared the device's edit time with the server's receive time
+    to decide which edit wins. **An offline record carries four times**, each with one meaning: `created_at` (made on
+    the device, accepted by the server, never changed), `edited_at` (last edit on a device; newest edit wins compares
+    these), `synced_at` (first reached the server), `updated_at` (the server's last change, the pull cursor). Clamp
+    device times more than a few minutes in the future to the server's time and log it; count reports by `created_at`
+    or the event's own time, never by sync time. Detail:
+    [../flutter/flutter-offline-desktop-and-mobile.md](../flutter/flutter-offline-desktop-and-mobile.md) §3.
+
 ## 4. How to check a whole app
 
 0. **Start from the migrations** (the user's method, 09/11/2026, and the right one): list every `date`,

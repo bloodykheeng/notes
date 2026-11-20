@@ -35,6 +35,7 @@ Flutter). Read the matching row before guessing. Each row: what you see, the rea
 | 10 | `flutter pub add x` installs a version **a major behind** the latest | Old dependencies in the project pin it (`flutter pub outdated` shows why) | Fine for now; note the reason in the repo's `AGENTS.md`, lift with a planned upgrade pass |
 | 11 | `flutter test` fails on `test/widget_test.dart` "Counter increments smoke test" | Flutter's template test, never updated for the app (it can never pass) | Replace it with real tests (or delete it); don't let a red template hide real failures |
 | 12 | `pub get` prints dozens of *"Package file_picker:windows references file_picker:windows as the default plugin..."* | Harmless plugin-metadata warnings from old plugin versions | Ignore; they go with the package upgrades |
+| 14 | A Windows build fails or behaves oddly while the **Visual Studio Installer is updating** | The update replaces the compiler and SDK files the build is using | Don't update Visual Studio during a build: stop the build, let the update finish (`vswhere -property catalog_productDisplayVersion` shows the new version), `rm -rf build/windows`, build again |
 | 13 | `flutter doctor`: *"Multiple adb binaries found"* | Another tool (here scrcpy) ships its own `adb` on the PATH | Harmless; or put the Android SDK's `platform-tools` first on the PATH |
 
 ## 2. The order that catches these early

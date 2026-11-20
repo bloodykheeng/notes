@@ -165,6 +165,16 @@ Sources: [Windows push notifications overview](https://learn.microsoft.com/en-us
 - Mobile data costs money: compress photos on capture (about 100 KB; MRDRS stored base64 photos in a `longText`),
   show progress on the first pull, measure its size in the field test.
 
+## 10a. Photos and files (seen on MRDRS, Nov 2026)
+
+- **Never base64 inside synced rows.** A photo in the row travels with every change to that row and with every first
+  sync; base64 adds a third. Keep files out of the data sync.
+- **Compress on capture** (longest side ~1,024 px, JPEG ~75%, about 100 KB); the server refuses oversized uploads.
+- **Server:** the file on a private disk (or S3-compatible storage) at `<module>/<kind>/YYYY/MM/<hash>.<ext>` (SDS's
+  `file-storage-structure.md`: a path made only of things that never change); the row keeps the path, type, size and
+  sha256; endpoints scoped to the tenant, never a public URL.
+- **App:** upload through the outbox when online; **download a file only when it is shown**, then cache it.
+
 ## 11. Repo hygiene
 
 - `.gitignore` from day one: no `db.sqlite`, backups, `analyze_output*.txt` or DLLs in git (MRDRS had all of them,

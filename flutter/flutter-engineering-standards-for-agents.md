@@ -205,6 +205,16 @@ minutes measured), so batch table changes into one build.
 - **Scripting edits on Windows:** Python's text mode turns LF into CRLF on write (`newline=''` keeps the file's
   endings), and a formatter run over the whole tree (`pint app`) rewrites files you never touched: run it on your
   files only.
+- **Big reference lists (places, drugs, diagnoses) belong in the local database, not read from JSON on use.** One
+  app parsed a 20 MB village file on every key press and 3.6 MB of other place files each time the patient form
+  opened. Load the bundled list once into an indexed table (JSON parsed in `compute`, batched inserts), search it
+  15 rows at a time, and sync only what the site adds. Index any column a timer query reads (`tag` for "anything to
+  send?"), or a 2-second sync check scans the whole table.
+- **`getSingle()` throws when there is no row:** use `getSingleOrNull()` for anything optional (an insurance payment,
+  a setting), and remember `SUM()` of no rows is `NULL` (return `?? 0`). Both crashed a bill page for ordinary
+  patients; only typing real records through the forms showed it.
+- **A page that loads its subject in `initState` must not read it with `!` in `build`:** the first frame comes
+  before the load, and the user sees a red error flash for a moment.
 - **Widget tests with drift:** a screen that writes to the database in `initState` never finishes under the test's
   fake clock. Pump it inside `tester.runAsync`, use `AppDatabase.forTesting(NativeDatabase.memory())`, set a
   desktop `tester.view.physicalSize`, and focus fields with `tester.showKeyboard` (a `tap` outside the 800×600

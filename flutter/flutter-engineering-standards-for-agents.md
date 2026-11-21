@@ -180,6 +180,31 @@ minutes measured), so batch table changes into one build.
 - **Filters are dropdowns that show their value**, never a button opening a dialog of choices; and check what the old dialog assigned: one assigned the choice to a local that shadowed the screen's field, so the filter never applied.
 - **Prepending an import to a file? Mind the byte-order mark:** Dart files saved with a BOM break ("Illegal character 65279") when text goes in front of it. Insert after the BOM, or strip stray BOMs after scripted edits.
 - **Before a new version reaches PCs that ran an old one, test the upgrade on real old databases.** Drift `if (from == N)` steps skip steps for a device several versions behind; `from <= N` breaks too when old steps rebuild tables with today's columns. Use step-by-step migrations with schema snapshots.
+- **A shell with a nested Navigator: open dialogs in it** (`showDialog(useRootNavigator: false, ...)`). A dialog on
+  the root navigator sits above the shell, and the old habit `Navigator.pop(context); Navigator.pushReplacement(
+  context, Page())` inside it then **replaced the whole shell** (sidebar, window buttons) with a bare page. Keep a
+  root `NavigatorObserver` that moves any stray unnamed page into the content navigator as a safety net.
+- **`DropdownButtonFormField(style: const TextStyle())` paints its items and value white.** An empty style replaces
+  the theme's text style there (unlike `TextField`, which merges it). Hundreds of old fields had it; remove it from
+  dropdowns only.
+- **Retrofit old forms in one shared place, not form by form:** a `FormColumn` drop-in for the form's `Column` that
+  puts consecutive fields two per row, drops the old `SizedBox` spacers, puts the submit button bottom right with
+  Cancel at the same height, and leaves the column alone when it holds `Expanded` / `Spacer` children (an
+  `Expanded` must sit directly in a `Column`). Dialog forms that drew a whole `Scaffold` + `AppBar` become a header +
+  body (no back arrow beside the X, no full-height empty dialog).
+- **Test forms by typing into them** (see `ai-agents/look-at-your-own-screens.md`): an `integration_test` that fills
+  every field the way a clerk would, in every shape (all fields, required only, with and without a photo, a flag
+  ticked), saves, edits, pages the list, and prints every form that refused with the field errors on screen. The
+  first run found five crashes and a duplicate-number bug that no screenshot showed. Give pickers a seam
+  (`PhotoPicker.debugOverride`): a test cannot drive the OS file dialog.
+- **Human numbers on offline devices:** house style (prefix + month + year + serial, month in the business
+  timezone), plus a **short device code** from the server at enrolment (A, B, C..., never reused), and a
+  per-device counter that only moves up. Each device writes only its own series, so two offline devices cannot
+  collide, and a deleted record's number is never reissued. Never a random digit (five possibilities a day repeat
+  within hours).
+- **Scripting edits on Windows:** Python's text mode turns LF into CRLF on write (`newline=''` keeps the file's
+  endings), and a formatter run over the whole tree (`pint app`) rewrites files you never touched: run it on your
+  files only.
 - **Widget tests with drift:** a screen that writes to the database in `initState` never finishes under the test's
   fake clock. Pump it inside `tester.runAsync`, use `AppDatabase.forTesting(NativeDatabase.memory())`, set a
   desktop `tester.view.physicalSize`, and focus fields with `tester.showKeyboard` (a `tap` outside the 800×600

@@ -173,6 +173,9 @@ minutes measured), so batch table changes into one build.
 - **Draw small brand marks in code** (`CustomPainter`) when the only logo file is a small PNG: scaled down it looks
   faded; drawn, it is sharp at every size. Ask the client for the vector file for icons and installers.
 - **Scripted edits across many files: start from a clean git tree, and make the script all-or-nothing.** A brace-matching script that crashed halfway had already saved the files before the crash, one of them with a 200-line cut (its parser misread a raw string `r'\'`). Parse raw strings and comments, write nothing until every file parsed, then check `git diff --numstat` for deletions out of proportion before building.
+- **A global `SelectionArea` around the app gives every label the text cursor** (Text inside a selection area wraps itself in a text-cursor MouseRegion, button labels and links included): clickable things stop showing the hand. Make data selectable where it is shown (table cells, record values) and wrap links in `SelectionContainer.disabled`.
+- **Check your own screens before the client does:** an integration test that signs in (account from `--dart-define`, never a file), opens each screen in light and dark and saves PNGs. On desktop the root layer is in physical pixels: capture `Offset.zero & view.flutterView.physicalSize`, or the picture is cropped on a scaled display. The app syncs every few seconds, so pump for a fixed time instead of `pumpAndSettle`.
+- **Wrapped card rows: round widths down** (`floorToDouble`) and choose columns that divide the cards (4, else 2), or the last card sits alone on a row.
 - **Widget tests with drift:** a screen that writes to the database in `initState` never finishes under the test's
   fake clock. Pump it inside `tester.runAsync`, use `AppDatabase.forTesting(NativeDatabase.memory())`, set a
   desktop `tester.view.physicalSize`, and focus fields with `tester.showKeyboard` (a `tap` outside the 800×600

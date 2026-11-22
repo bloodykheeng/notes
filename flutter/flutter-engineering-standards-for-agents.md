@@ -256,6 +256,10 @@ Every build error seen so far, with its fix: [flutter-build-troubleshooting.md](
 
 ## 9. Anti-patterns seen (do not repeat)
 
+Phone-specific mistakes (status bar, Back with a nested navigator, pickers on touch, squeezed dialogs and
+steppers, a date parsed in `onSaved`) and their fixes: [flutter-phones-dialogs-navigation-lessons.md](flutter-phones-dialogs-navigation-lessons.md).
+
+
 | Seen | Instead |
 | --- | --- |
 | 52 copy-pasted sync services, 72 screens each loading permissions | one engine from a registry; one permission service |

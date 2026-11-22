@@ -169,7 +169,7 @@ right. Not after I remind you: if it is written here, you are expected to know i
 ### architecture
 | Note | What it covers |
 | --- | --- |
-| [mrdrs-track-a-architecture.md](architecture/mrdrs-track-a-architecture.md) | MRDRS Track A in plain words, for the team: one cloud server and one database for 40+ facilities, devices enrolled with a code, sync (what stays, what is new), Reverb signals, offline vs online per feature, ready-made roles, notifications by platform, dates and ids, the file structure of the API, the Flutter app and the console, how we work together |
+| [mrdrs-track-a-architecture.md](architecture/mrdrs-track-a-architecture.md) | MRDRS Track A in plain words, for the team: one cloud server and one database for 40+ facilities, sign in with a facility code (one token and one local database per facility, several facilities per device), offline then online (tags, push then pull, server-clock cursor, newest edit wins), sync (what stays, what is new), Reverb signals, offline vs online per feature, ready-made roles, notifications by platform, dates and ids, the file structure of the API, the Flutter app and the console, how we work together |
 
 ### vscode
 | Note | What it covers |

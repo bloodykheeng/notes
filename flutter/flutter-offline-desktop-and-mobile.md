@@ -82,15 +82,23 @@ The server rules are in the dates note. On the device:
 7. **The server side must be pinned too** (`DB_TIMEZONE=+00:00`, dates note trap 7): MRDRS's API had no pin while all
    its sync timestamps were MySQL `TIMESTAMP` columns.
 
-## 4. Devices, sign-in and secrets (Planned)
+## 4. Devices, sign-in and secrets (Proven on MRDRS, Nov 2026)
 
-- **Enrol each device once** with a short code an admin generates; the API returns a **Sanctum token for the device**
-  (a `devices` table: tenant, name, platform, app version, last seen, revoked). A lost device is revoked alone; you can
-  see which devices are syncing and on which version. Store the token with `flutter_secure_storage`.
+- **Join by signing in with a tenant code** (the pattern that worked on MRDRS, Nov 2026): the first screen asks for
+  the **tenant code** (FAC01), username and password; the API checks the account inside that tenant and returns a
+  **Sanctum token for the device** (a `devices` table: tenant, name, platform, app version, last seen, revoked). No
+  separate enrolment step: people already know their account, and a second code got mixed up with the first. Keep an
+  optional per-tenant "only approved devices" switch that also asks for an admin-made enrolment code, and accept that
+  code in the tenant box too. A lost device is revoked alone. Store the token with `flutter_secure_storage`.
+- **One local database file per tenant** (`app_<CODE>.sqlite`) when one device may serve several tenants: switching
+  tenant reopens the app on the other file, so records can never mix; keep the list of tenants and tokens in secure
+  storage. Renew the navigator's GlobalKey on each restart or the old screens survive it.
+- **Stay signed in until Sign out** (remember the user per tenant); people hate signing in every time they open it.
+- Full write-up of the pattern and the sync catch-up: `architecture/mrdrs-track-a-architecture.md` sections 4 and 4a.
 - **No secret in a client build** (a login or key compiled into an app can be extracted by anyone holding it).
   Third-party credentials live on the server per tenant; the app calls our API, which calls them.
 - **Offline sign-in needs a hash on the device**: bcrypt, never plain text, and never sent to the server in clear.
-- Internet is needed once, at enrolment and the first pull; after that the device works offline.
+- Internet is needed once, at the first sign-in and the first pull; after that the device works offline.
 
 ## 5. Live updates: Reverb from Dart (Letshego Proven on Android; Windows Planned)
 

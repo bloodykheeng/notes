@@ -5,7 +5,8 @@ changes, and where each piece lives in the code. Read it in one sitting; the ste
 decision are in the project workspace (`docs/plan-track-a-multi-facility.md`, `docs/decisions.md`) and each repo's
 `docs/`.
 
-*Status: agreed direction, 20 Nov 2026. Parts marked (planned) are being built now.*
+*Status: agreed direction 20 Nov 2026; sign-in, facilities on a device, sync and DHIS2 through the server built and
+deployed 22 Nov 2026 (sections 4 and 4a describe them as built). Parts marked (planned) are still to come.*
 
 ---
 
@@ -14,7 +15,8 @@ decision are in the project workspace (`docs/plan-track-a-multi-facility.md`, `d
 MRDRS keeps being the Flutter app staff already know, still **working offline** on each computer's own database.
 What changes is **where it syncs to**: instead of a small server installed at every facility, every PC and phone at
 every facility syncs to **one server in the cloud with one database**, where each facility's records are kept apart
-by a `facility_id`. A new PC joins with an **enrolment code** (no Laragon, no IP setup), desks see each other's work
+by a `facility_id`. A new PC or phone joins by **signing in with the facility code** (e.g. FAC01) and a staff
+account (no Laragon, no IP setup), desks see each other's work
 **within a second** through Reverb instead of polling, roles **come ready-made**, the app **installs and updates
 itself**, and it runs on **Windows and Android**. A small **web console** lets us and the client run 40+ facilities.
 
@@ -24,7 +26,7 @@ itself**, and it runs on **Windows and Android**. A small **web console** lets u
 | --- | --- | --- |
 | Where data meets | a Laravel + MySQL server on each facility's LAN (Laragon, a fixed IP) | **one cloud server**, one database, all facilities |
 | Facilities per server | one | **40+**, kept apart by `facility_id` |
-| Installing at a site | Laragon, PHP, MySQL, migrations, IP setup, then the app on each PC | **run the installer, type the enrolment code, sign in** |
+| Installing at a site | Laragon, PHP, MySQL, migrations, IP setup, then the app on each PC | **run the installer, sign in with the facility code and an account** |
 | How a PC knows something changed | asks every 2 seconds | the server **tells it** (Reverb); a slow check every few minutes as backup |
 | Roles | built by each facility's admin | **ready-made** with their permissions; per-user switches |
 | Devices | desktop (Windows) | **Windows and Android**, same app |
@@ -120,15 +122,59 @@ the HMIS reply for the console. The dataset structure the app needs is fetched t
 figures come from the device's copy of the facility's data, the app **syncs first** and won't compute on stale data.
 (Moving the computation to the server, from the day's transactions, is Track B.)
 
-## 4. A device joins (once)
+## 4. A device joins: sign in with the facility code (as built, 22 Nov 2026)
 
-1. In the console (or a server command) we create the facility. The server makes its **Admin role, its other roles,
-   its first admin user** and an **enrolment code**.
-2. On the new PC or phone: install the app, type the server address (prefilled) and the **enrolment code**, give the
-   device a name ("Reception PC").
-3. The server answers with **a token for that device** and the facility it belongs to. The device downloads the
-   facility's data (the first pull, needs internet once).
-4. Staff sign in **offline** from then on. A lost device is revoked on its own in the console.
+**The facility code** (FAC01, FAC02...) is the facility's id on the shared server. One server holds every facility;
+the code says which one a person belongs to, so two facilities can each have an "admin" without mixing them up.
+
+1. In the console (or `php artisan facility:create`) we create the facility. The server makes its **code**, its
+   ready-made roles and its **first admin account**.
+2. On a new PC or phone: install the app, open it, type **facility code + username + password**
+   (`POST devices/sign-in`). Nothing else: no server address, no device name, no enrolment code.
+3. The server checks the account against **that facility's** users and answers with **a token for this device**
+   (Sanctum, one row in `devices`: facility, name, platform, app version, last seen) and the facility's details.
+4. The app opens **a database file of its own for that facility** (`mrdrs_FAC01.sqlite`) and downloads the
+   facility's records once (the first pull, the only step that needs internet). From then on it works offline.
+5. Staff sign in **offline** on that device against the accounts that came down (bcrypt hashes, never plain text).
+   The app **stays signed in until Sign out**, so closing it or pressing Back does not sign anyone out.
+
+Extras that came from real use:
+
+- **Several facilities on one device** (a district officer's laptop): each sign-in adds a facility with its own
+  token and its own database file; "Facilities on this device" switches between them. Records never mix, because
+  they never share a file.
+- **Only approved devices** (a switch per facility in the console, off by default): signing in on a new device then
+  also asks for an **enrolment code** an admin generated. Testers mixed the two codes up, so the server also accepts
+  an enrolment code typed in the facility code box.
+- **A lost device** is revoked on its own in the console; the others keep working.
+- **Wrong tries** are limited per facility code, username and network address, with one message for every wrong
+  part ("the facility code, username or password is wrong"), so it does not reveal which facilities or users exist.
+
+## 4a. Offline, then online again: how sync catches up (as built)
+
+Every record is made **on the device**, with an id made there (a UUID), so it can be saved with no network at all.
+
+- **Every local row carries a tag**: `created`, `updated`, `deleted` (a tombstone, never a hard delete once it has
+  synced) or `synced`. Saving offline just writes the row with its tag; nothing waits for the network.
+- **When the device is online again** (at start, after a save, when the network returns, on a server signal, and on
+  a slow timer as a safety net), sync runs in two steps:
+  1. **push**: every row not `synced`, table by table in dependency order (patients before visits before triages);
+     the server saves it, stamps the facility from the device token, and answers; the row becomes `synced`;
+  2. **pull**: everything changed on the server **since the last cursor**, where the cursor is the **server's clock**
+     (`server_time` from the previous pull), never the device's (device clocks are wrong more often than you think).
+- **Two devices edited the same record offline**: the newest edit wins (`updated_at`), and the server refuses an
+  older write over a newer one (409), so a late push never undoes newer work.
+- **The server keeps facilities apart**: it never takes `facility_id` from the app; it stamps it from the token and
+  filters every pull by it.
+- **After a push the server tells the facility's other devices** (Reverb, a private channel per facility), so they
+  pull within a second instead of waiting for the timer.
+- **Rows derived on several devices** (a lab test made for a lab fee) take the source row's id, so two offline
+  devices filling the same gap write the same row and sync merges them instead of making two.
+- **Values only the server keeps** (the facility's name, code, district) are pushed down; if an old PC pushes its own
+  copy, the server keeps its value and tombstones the extra row, and the app's lookups take the newest row and never
+  crash on two.
+- **Schema changes are additive** (new nullable fields, the server first), because old and new app builds sync to
+  the same server for a while.
 
 ## 5. Sync: what stays and what is new
 
@@ -152,7 +198,7 @@ last write wins by `updated_at`; schema changes **additive only, new fields null
 
 | Offline, synced later | Offline, but "Pending" until the server confirms | Needs internet |
 | --- | --- | --- |
-| patients, visits, triage, notes, diagnoses, lab and imaging requests and results, registers, prescriptions, sign-in | dispensing (shared stock), cash payments and receipts | enrolling a device, the first pull, DHIS2 push, the console |
+| patients, visits, triage, notes, diagnoses, lab and imaging requests and results, registers, prescriptions, sign-in | dispensing (shared stock), cash payments and receipts | the first sign-in on a device and its first pull, DHIS2 push, the console |
 
 The top bar always shows the state: **All sent · 3 waiting · Offline · Live**.
 
@@ -189,7 +235,7 @@ app/
     Concerns/BelongsToFacility.php        facility scope + stamping              (planned)
   Http/
     Controllers/Sync/*SyncController.php  the existing sync endpoints
-    Controllers/DeviceController.php      enrol, me, sign out                    (planned)
+    Controllers/DeviceController.php      sign-in (facility code), me, facility, sign out
     Controllers/Console/*                 the web console's API                  (planned)
     Middleware/ResolveDevice.php          token -> device -> current facility    (planned)
   Events/FacilityChanged.php              the Reverb signal                      (planned)
@@ -206,7 +252,7 @@ docs/   sync-and-facilities.md, realtime.md, roles-and-permissions.md, data-rule
 lib/
   core/        (planned: new code goes here)
     api/          one HTTP client, token + app version headers
-    auth/         enrolment, device token, offline sign-in
+    auth/         sign-in with the facility code, device tokens, facilities on this device, offline sign-in
     sync/         the sync engine (today: lib/services/sync_service.dart)
     realtime/     Reverb client, facility channel
     time/         business-day helper (Kampala)

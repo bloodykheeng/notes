@@ -53,6 +53,7 @@ right. Not after I remind you: if it is written here, you are expected to know i
 | Setting up a workspace with app repos inside it (git colours in VS Code) | [vscode/git-colours-for-nested-repos.md](vscode/git-colours-for-nested-repos.md) |
 | A deploy or redeploy | [deploy-with-an-ai-agent.md](ai-agents/deploy-with-an-ai-agent.md) or [deploy-yourself-over-ssh.md](ai-agents/deploy-yourself-over-ssh.md) |
 | Security patching PHP / Node | [security/patch-php-node-with-an-ai-agent.md](security/patch-php-node-with-an-ai-agent.md) |
+| Publishing app builds (apk, Windows installer) for download, Cloudflare R2 | [cloudflare/r2-publish-app-builds-with-an-agent.md](cloudflare/r2-publish-app-builds-with-an-agent.md) |
 
 ## Contents
 
@@ -73,6 +74,11 @@ right. Not after I remind you: if it is written here, you are expected to know i
 | [enums-and-migrations.md](ai-agents/enums-and-migrations.md) | Every fixed list as a PHP enum cast on the model (strings in the database, values listed in the migration comment, web mirrors), reading and writing cast values, and migrations people can read (every column written out, grouped and spaced, explanations above, no date columns, edit in place only before a deploy), with the mistakes an agent made |
 | [deploy-with-an-ai-agent.md](ai-agents/deploy-with-an-ai-agent.md) | The playbook for an AI agent deploying a Laravel + Next.js project with me: study the repo first, read-only server checks, env files made locally (fresh secrets, never in git), rounds of short verified blocks, `for` loops over environments, nothing interactive mid-paste, backups and asking before destructive steps, stop-all/restart-all on small boxes, secrets never echoed, and writing `docs/deployment.md` + `docs/redeployment.md` (plus a handoff) into the repo |
 | [deploy-yourself-over-ssh.md](ai-agents/deploy-yourself-over-ssh.md) | When the agent has the SSH login (in a txt on my machine) and runs the deploy itself: folder layout, reading secrets without leaking them (masks, file-to-file), the `SSH_ASKPASS` password helper for Windows OpenSSH (and asking before installing a key), the order of work for restoring a site from a hosting backup (baked API URLs, `env()` vs `config:cache`, MariaDB dump's sandbox line, `tar --force-local`), DNS traps (no zone = REFUSED, Contabo's template MX, empty Name = root, RDAP for the registrar), Windows traps, clean-up and reporting (Elevate Pesa, Nov 2026) |
+
+### cloudflare
+| Note | What it covers |
+| --- | --- |
+| [r2-publish-app-builds-with-an-agent.md](cloudflare/r2-publish-app-builds-with-an-agent.md) | App builds handed out from an R2 bucket: one folder per app and environment, fixed file names and a `release.json` the download page reads; the bucket-scoped API token (Object Read & Write) saved outside the repos; the agent uploads with curl's `--aws-sigv4` and a temporary config so keys never show; content types, `no-cache` on `release.json`, upload order, checks from outside; checking what server a build talks to before release; SmartScreen and code signing |
 
 ### security
 | Note | What it covers |

@@ -101,6 +101,9 @@ time. Read it with [flutter-engineering-standards-for-agents.md](flutter-enginee
   with `.hitTestable()` and press Next before looking for a later step's fields.
 - **Rows of controls** (year, period, Generate): on a phone, pickers share one row and buttons go full width below;
   one shared widget for all report screens.
+- **No floating "+" on phones**: a `FloatingActionButton` that replaces the header's Add on narrow screens covers
+  the last card's buttons as the list grows, and two of them even opened the wrong form (a patient registration on
+  the lab requests page). One Add button in the list header, at every width.
 - **Old hand-built `DataTable` pages** scroll sideways on a phone; lists people work in (a visit's triages) become
   cards under 600 px, like the shared list widget.
 

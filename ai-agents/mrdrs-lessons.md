@@ -76,3 +76,9 @@ went wrong, why, and the rule now**, so the next system starts right. The projec
 4. **Offline = a local store + an outbox + a server**, never a shared file and never a server per site.
 5. Secrets never in the client; one token per device.
 6. Roles ready-made; title free text; per-user exceptions as switches.
+7. **Ticked rows belong to the rows on screen.** Clear the ticks whenever the page, search, sort or filter changes,
+   and count only ticked rows still shown; otherwise a search leaves "Delete (4)" over one row.
+8. **Open a detail page on top of its list, never pop the list first.** Popping then pushing left Back going home
+   and the sidebar losing its place.
+9. **Master data that ships with the app can still be kept from the console**: give it the app's own ids and send
+   the changed rows in the normal pull, so no app release is needed for a missing village. Hide, never delete.

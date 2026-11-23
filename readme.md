@@ -170,6 +170,7 @@ right. Not after I remind you: if it is written here, you are expected to know i
 | Note | What it covers |
 | --- | --- |
 | [mrdrs-track-a-architecture.md](architecture/mrdrs-track-a-architecture.md) | MRDRS Track A in plain words, for the team: one cloud server and one database for 40+ facilities, sign in with a facility code (one token and one local database per facility, several facilities per device), offline then online (tags, push then pull, server-clock cursor, newest edit wins), sync (what stays, what is new), Reverb signals, offline vs online per feature, ready-made roles, notifications by platform, dates and ids, the file structure of the API, the Flutter app and the console, how we work together |
+| [hierarchies-one-table-vs-table-per-level.md](architecture/hierarchies-one-table-vs-table-per-level.md) | Trees (places, sales structures, organisations): a table per level vs one table with `level` + `parent_id` (MRDRS's 84,558 places); what each gives, the recursive queries, getting the schema's protection back (composite FK + CHECK), levels as data so one product serves clients with different trees, and the pitfalls (CSV commas, load order, never delete) |
 
 ### vscode
 | Note | What it covers |

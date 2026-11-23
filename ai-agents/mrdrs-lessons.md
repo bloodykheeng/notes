@@ -94,3 +94,10 @@ went wrong, why, and the rule now**, so the next system starts right. The projec
     say "check the date and time" on a `TlsException` instead of a generic network error.
 13. **A visit closes when its bill is paid, not when the bill is opened**: closing on "make the bill" hid the visit
     from the clinician while nothing was paid.
+14. **A saved server address outlives every reinstall.** An old build's `http://uhfmrisapi.test/api/` override in
+    `shared_preferences.json` made a laptop fail on every release, while we chased certificates and firewalls.
+    Release builds drop a non-HTTPS saved address, and the error names the server it tried. Go look at the machine
+    early: [remote-debug-a-windows-pc-over-ssh.md](remote-debug-a-windows-pc-over-ssh.md).
+15. **A desktop window sized in fixed pixels runs off small screens.** Size it from the screen's work area
+    (`screen_retriever`), maximise on small screens, and keep the minimum below the screen, or the title-bar buttons
+    are unreachable. And give an old Windows runner the `FLUTTER_VERSION` defines, or the exe says 1.0.0 forever.

@@ -82,3 +82,15 @@ went wrong, why, and the rule now**, so the next system starts right. The projec
    and the sidebar losing its place.
 9. **Master data that ships with the app can still be kept from the console**: give it the app's own ids and send
    the changed rows in the normal pull, so no app release is needed for a missing village. Hide, never delete.
+10. **A form saves once.** Disable the button while saving, make the new record's id once per form (insert or
+    update on it), and close the dialog only after every write succeeded. A write that threw after the insert left
+    the dialog open and each press added a user, past the position's vacancies.
+11. **No `!` on a record's optional field when an edit form opens.** Data synced from other devices and older builds
+    has the gaps: `user.loginRole!` made Edit a grey screen in release for every staff member who cannot sign in.
+    Read with `?? ''` and validate on save.
+12. **Ship your TLS roots in a Flutter Windows app.** Dart trusts only the roots already in the Windows store, and
+    Windows 10 adds a root only when a browser meets it: on a fresh PC the app said "Could not reach the server"
+    while the browser worked. Add the CA's roots from assets to `SecurityContext.defaultContext` at start-up, and
+    say "check the date and time" on a `TlsException` instead of a generic network error.
+13. **A visit closes when its bill is paid, not when the bill is opened**: closing on "make the bill" hid the visit
+    from the clinician while nothing was paid.

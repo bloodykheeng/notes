@@ -101,3 +101,13 @@ went wrong, why, and the rule now**, so the next system starts right. The projec
 15. **A desktop window sized in fixed pixels runs off small screens.** Size it from the screen's work area
     (`screen_retriever`), maximise on small screens, and keep the minimum below the screen, or the title-bar buttons
     are unreachable. And give an old Windows runner the `FLUTTER_VERSION` defines, or the exe says 1.0.0 forever.
+16. **A business rule must never trap the person using the app.** We first answered "can a drug be added after the
+    bill is paid?" with a block ("start a new visit"), and suggested reopening old visits for 7 days only. Both
+    would have stopped real work. The rule now: a rule may ask one question or record a reason, but always leaves a
+    way forward (reopen with one click; close with a preselected reason; backdating open). General note:
+    [../architecture/rules-that-never-trap-users.md](../architecture/rules-that-never-trap-users.md).
+17. **Not every visit is paid for.** Free and exempted services, referrals and follow-ups never have a "paid in full"
+    moment, so "the visit closes when the bill is paid" needs a Close button beside it (with a reason when money is
+    owed), or open visits pile up for ever.
+18. **Check every link column, not just the usual name.** An "is this record empty?" check looked for children by
+    `vid` only; one child table used `visit_id`, so a visit with notes passed as empty and could be deleted.

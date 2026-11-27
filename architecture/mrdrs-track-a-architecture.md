@@ -192,7 +192,9 @@ of 2,000 (`X-Sync-Next` keyset cursor, one database transaction a page, the page
 resumes). Only a complete pass stamps the new cursor (the server's time minus a 10 s overlap). Photos are not in the
 pulls: each record carries a short fingerprint and the photo is fetched when opened. **Every server-side write must
 stamp the facility's last write** (model events do it; raw SQL in a command does not, and devices would never see the
-rows). Reverb is running on the server; the app does not listen to it yet (planned), the 2 s probe stands in.
+rows). **Reverb (as built, 28 Nov):** the app joins its facility's private channel with the device token and syncs
+when told, after a local save, and once a minute as a safety net; when the socket is down it polls every 2 s as
+before ([../flutter/realtime-reverb-from-flutter.md](../flutter/realtime-reverb-from-flutter.md)).
 
 ## 4b. The device database: one encrypted drift file per facility (as built)
 

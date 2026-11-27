@@ -118,6 +118,14 @@ minutes measured), so batch table changes into one build.
   `dart run build_runner watch` while editing tables so each change is a small incremental build.
 - **Keep drift current** (read the changelog before a major); generated code from an old drift can be slower and miss
   fixes.
+- **drift's `NativeDatabase(file)` runs SQLite on the UI isolate:** a bulk write (tens of thousands of rows) freezes
+  frames and timers, and requests in flight time out (MRDRS: a false "Offline" and tables downloaded twice). Chunk big
+  writes (about 2,000 rows, a short pause between), defer one-off seeding until after the first download, parse big
+  JSON with `compute`, or move SQLite off the UI isolate with `NativeDatabase.createInBackground`:
+  [first-download-with-progress.md](first-download-with-progress.md).
+- **Encrypt the device file** when it holds personal data (SQLite3MultipleCiphers through `package:sqlite3` 3.x, a key
+  per file in secure storage, plain files converted in place):
+  [encrypting-the-device-database.md](encrypting-the-device-database.md).
 - **Weighed and rejected for a relational offline app:** plain SQL with hand mapping (no type safety; a rewrite of every
   DAO), Isar and Hive (not relational, original maintainers left; community forks only), ObjectBox (not SQL), Realm
   (its sync service deprecated). PowerSync (with drift) is worth a look when choosing a sync service. (From knowledge

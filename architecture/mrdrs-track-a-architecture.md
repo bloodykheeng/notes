@@ -6,7 +6,9 @@ decision are in the project workspace (`docs/plan-track-a-multi-facility.md`, `d
 `docs/`.
 
 *Status: agreed direction 20 Nov 2026; sign-in, facilities on a device, sync and DHIS2 through the server built and
-deployed 22 Nov 2026 (sections 4 and 4a describe them as built). Parts marked (planned) are still to come.*
+deployed 22 Nov 2026; the first download on the sign-in screen and the encrypted device database built 27 Nov 2026
+(app 1.0.11). Sections 4, 4a and 4b describe them as built; parts marked (planned) are still to come. What went wrong
+on the way, and the rule now: [../ai-agents/mrdrs-lessons.md](../ai-agents/mrdrs-lessons.md).*
 
 ---
 
@@ -133,10 +135,16 @@ the code says which one a person belongs to, so two facilities can each have an 
    (`POST devices/sign-in`). Nothing else: no server address, no device name, no enrolment code.
 3. The server checks the account against **that facility's** users and answers with **a token for this device**
    (Sanctum, one row in `devices`: facility, name, platform, app version, last seen) and the facility's details.
-4. The app opens **a database file of its own for that facility** (`mrdrs_FAC01.sqlite`) and downloads the
-   facility's records once (the first pull, the only step that needs internet). From then on it works offline.
+4. The app reopens on **a database file of its own for that facility** (`mrdrs_FAC01_<part of its id>.sqlite`,
+   encrypted, section 4b) and **downloads every record of the facility on the sign-in screen** before anyone goes in:
+   a percentage, what is coming down ("Now: Patients, page 3") and the size so far. No internet: "Waiting for the
+   internet", and it carries on by itself from where it stopped; the app closed halfway reopens on the download. Then
+   it signs the person in with what they typed and opens a dashboard with everything already there. This first
+   download is the only step that needs internet. (Until 27 Nov people went in after the staff tables while the rest
+   came down in the background; someone could then register a patient twice who had not arrived yet.)
 5. Staff sign in **offline** on that device against the accounts that came down (bcrypt hashes, never plain text).
-   The app **stays signed in until Sign out**, so closing it or pressing Back does not sign anyone out.
+   A password changed in the console and not synced yet is checked with the server once and its hash taken. The app
+   **stays signed in until Sign out**, so closing it or pressing Back does not sign anyone out.
 
 Extras that came from real use:
 
@@ -176,6 +184,38 @@ Every record is made **on the device**, with an id made there (a UUID), so it ca
 - **Schema changes are additive** (new nullable fields, the server first), because old and new app builds sync to
   the same server for a while.
 
+**How a pass runs today (as built, `lib/services/sync_service.dart`):** a timer every 2 seconds (off during the first
+download) starts one pass, shared if two callers meet. The pass asks `GET sync/changes?since=<cursor>` which tables
+changed (an idle facility answers "nothing" from one indexed column, so an idle device costs one cheap request), then
+runs each listed table, or one with unsent rows, in dependency order: push its unsent rows, pull its changes in pages
+of 2,000 (`X-Sync-Next` keyset cursor, one database transaction a page, the page reached remembered so a cut pull
+resumes). Only a complete pass stamps the new cursor (the server's time minus a 10 s overlap). Photos are not in the
+pulls: each record carries a short fingerprint and the photo is fetched when opened. **Every server-side write must
+stamp the facility's last write** (model events do it; raw SQL in a command does not, and devices would never see the
+rows). Reverb is running on the server; the app does not listen to it yet (planned), the 2 s probe stands in.
+
+## 4b. The device database: one encrypted drift file per facility (as built)
+
+- **drift over SQLite**, split by area (`lib/data/tables/<area>.dart`, one DAO per file, modular generation: the old
+  single 9,466-line file could not even be generated). Queries live in DAOs, never in screens. Migrations are
+  cumulative (`if (from < N)`); before go-live new columns go into the create step.
+- **One file per facility on the device**, named after its code and part of its id, so two servers' "FAC01" never
+  share a file. A removed facility's file and key are deleted before the next database opens; adding it back starts
+  a fresh file.
+- **Encrypted** with SQLite3MultipleCiphers (`package:sqlite3` 3.x with `source: sqlite3mc`; the SQLCipher Flutter
+  package is end of life). One random 256-bit key per file, kept only in the platform's secure storage (Windows
+  DPAPI, Android Keystore); the key is the first statement on every connection. Files from before 1.0.11 are
+  converted in place on first open, counted before and after, kept plain if anything differs (retried next start).
+  An older app cannot open an encrypted file, so releases never go back. The log says only "DB encryption: on, file
+  encrypted", never the key. How: [../flutter/encrypting-the-device-database.md](../flutter/encrypting-the-device-database.md).
+- **SQLite runs on the screen's thread** (drift's default `NativeDatabase`): anything big is chunked and deferred.
+  The national places list (84,500 rows from a bundled file) loads after the first download, 2,000 rows at a time;
+  loaded at sign-in in one go it froze the app, the download's first request timed out, and the app showed "Offline"
+  while online and fetched the staff tables twice.
+- **Memory:** pulls arrive one page (2,000 rows) at a time and are saved before the next is asked, so a phone never
+  holds a whole table; photos are fetched one at a time on demand. Screens that still load a whole table (the audit
+  trail, bills) are to be paged (planned).
+
 ## 5. Sync: what stays and what is new
 
 **What stays (Zed's protocol, it works):** ids made on the device; push unsynced rows, then pull; the pull cursor
@@ -198,9 +238,10 @@ last write wins by `updated_at`; schema changes **additive only, new fields null
 
 | Offline, synced later | Offline, but "Pending" until the server confirms | Needs internet |
 | --- | --- | --- |
-| patients, visits, triage, notes, diagnoses, lab and imaging requests and results, registers, prescriptions, sign-in | dispensing (shared stock), cash payments and receipts | the first sign-in on a device and its first pull, DHIS2 push, the console |
+| patients, visits, triage, notes, diagnoses, lab and imaging requests and results, registers, prescriptions, sign-in | dispensing (shared stock), cash payments and receipts | the first sign-in on a device and its first download (on the sign-in screen), DHIS2 push, the console |
 
-The top bar always shows the state: **All sent · 3 waiting · Offline · Live**.
+The top bar shows the state as a chip: **Synced 10:42 PM · Offline · Sync problem** (a click explains it and lists
+any refused rows). A "3 waiting" count is planned.
 
 ## 7. Roles and permissions
 
@@ -253,7 +294,8 @@ lib/
   core/        (planned: new code goes here)
     api/          one HTTP client, token + app version headers
     auth/         sign-in with the facility code, device tokens, facilities on this device, offline sign-in
-    sync/         the sync engine (today: lib/services/sync_service.dart)
+    sync/         sync status chip state, progress of the first download, first_download.dart ("done" check);
+                  the engine itself is lib/services/sync_service.dart (+ sync_paging.dart: pages, cursors)
     realtime/     Reverb client, facility channel
     time/         business-day helper (Kampala)
     permissions/  one permission service
@@ -262,7 +304,9 @@ lib/
   features/<feature>/  data / domain / presentation      (moved here as touched)
   shared/      tables, form sections, empty/loading/error states
   theme/       Material 3 theme, app shell, sync indicator
-  data/        drift database (today's tables stay)
+  data/        drift database: tables/<area>.dart, daos/, drift_database.dart (one encrypted file per facility),
+               database_encryption.dart (keys, conversion of plain files)
+  screens/login_page.dart  sign-in, the first download with its progress, offline sign-in
   services/    today's sync services (kept, extended in one place)
 installer/     Windows installer script (Inno Setup)                  (planned)
 AGENTS.md      the rules for anyone (or any AI agent) working in the repo

@@ -98,7 +98,16 @@ How:
   pass). Found from the server's access log: two pulls of the staff table in the same second. A test that runs the
   two steps one after the other never shows it; start them together, as the app does.
 - A site removed from a device and added again must clear its old cursor and page markers, or the new empty file
-  resumes mid-table or trusts an old "synced up to" and skips older rows.
+  resumes mid-table or trusts an old "synced up to" and skips older rows. And it must really start a new file:
+  reusing the old one meant nothing downloaded.
+- **A sync reply must act on the site it was for, never on "the current site".** Removing a site ended its token
+  on the server while a background pass was still running with it; the pass's "not allowed" reply then made the app
+  forget the site in use at that moment, the other one. Name the target before anything slow, pause background sync
+  during the change, and have each pass remember the site it started for. With several sites on one device, check
+  every reply handler for this race (anything that reads "current" after an `await`).
+- **Offer "remove this site" from the device's own count of unsent rows**, not from a status chip that flips with
+  every pass on a flaky line; say in words why it is unavailable (a tooltip never shows on a phone). Count only the
+  synced tables: a local-only table with the same `tag` column kept the button disabled.
 - On a PC, the test and production builds (and a developer's runs) can share one data folder: record which server
   each saved account belongs to and list only the current server's.
 

@@ -7,7 +7,9 @@ went wrong, why, and the rule now**, so the next system starts right. The projec
 `D:\coding\new wave\mrdrs\mrdrs-workspace` (start with its `CLAUDE.md`, `brainstorm/`, `docs/decisions.md`,
 `docs/plan-track-a-multi-facility.md`). Read [who-i-am-and-how-i-work.md](who-i-am-and-how-i-work.md) first.
 
-**Status:** started 20 Nov 2026, add to it as Track A (the fix) and Track B (the rebuild) go on.
+**Status:** started 20 Nov 2026, last added 27 Nov 2026 (lessons 21 to 26: the first download, encryption, the
+UI-thread freeze); add to it as Track A (the fix) and Track B (the rebuild) go on. How the app is built today:
+[../architecture/mrdrs-track-a-architecture.md](../architecture/mrdrs-track-a-architecture.md).
 
 ---
 
@@ -119,3 +121,49 @@ went wrong, why, and the rule now**, so the next system starts right. The projec
     with `| tail`; never mask secrets with `sed` on the way to the screen (read them file to file); on a phone, move
     between fields with TAB, since taps miss once the keyboard shifts the layout; and clear a password field with
     End plus backspaces before retyping, as select-all did not take.
+21. **Finish the first download before letting anyone in.** We let people in after the staff tables and brought the
+    rest down in the background (it "felt faster"). The owner, testing on a laptop, saw the gap at once: someone opens
+    Patients mid-download, does not find a returning patient who has not arrived yet, and registers them twice. Now
+    one full pass runs on the sign-in screen with real progress, waits for the internet and carries on by itself, and
+    reopens on the download if the app is closed. How: [../flutter/first-download-with-progress.md](../flutter/first-download-with-progress.md).
+22. **Heavy local work at the sign-in moment broke the network.** Loading 84,500 places into the new file on the UI
+    thread (drift's default) froze the app for seconds; the download's first request timed out. Two "bugs" came from
+    it: permissions and staff downloaded twice (the step that marks tables done never got the server's time), and the
+    chip said "Offline" while online. The server's access log showed no failed request: when the server saw nothing,
+    suspect the client freezing. Defer and chunk heavy writes.
+23. **A Windows release can miss a native library that every test loads.** Encryption moved SQLite into a build-hook
+    DLL; the project's older Windows CMake template never copied it beside the exe, so the release had no SQLite while
+    all tests passed (they load it from the build folder). Run the real release on a laptop, not only the tests:
+    [../flutter/encrypting-the-device-database.md](../flutter/encrypting-the-device-database.md).
+24. **A server command that writes with raw SQL is invisible to syncing devices** (the same trap as lesson 19, in
+    production code): a "reopen unpaid visits" command updated rows without stamping the site's last write, so every
+    idle device was told "nothing changed" and moved its cursor past them for good. Stamp the site in every raw write,
+    and prove it with a test of an idle device.
+25. **"Remove" then "add back" reused the old file.** Removing a site deleted its file only at the next start, and
+    adding it back took it off the delete list, so the "download" was one quick check. On a flaky line that check
+    failed and the app showed "Offline" right after sign-in, while the owner saw a bar that never moved. Fixed: the
+    file stays on the delete list and the database deletes it before opening it fresh (Remove is only offered when
+    everything is synced). Keep what the dialog promises ("this device forgets the facility") literally true, and
+    let the sign-in screen report only a clean pass to the status chip.
+26. **Agent habits from the phone and laptop tests:**
+    - Before every tap on a phone, check that the app is in front (`dumpsys window` → `mCurrentFocus`). The owner
+      took a call mid-test and the taps landed in the call and a chat; a tap may have muted them.
+    - When a password from the accounts file is refused, check the server's account (active, last edited) before
+      blaming the app. The file had been edited. Then reset the test account the product's way (the console's
+      one-time password), save it to its own file and never print it.
+    - Time the network with `curl -w` before blaming the app.
+    - Don't stop at "it passed once": prove the hard cases (internet cut mid-download, app killed mid-download,
+      a truly fresh file) with the access log.
+27. **A slow answer acted on "whatever is current now" removed the wrong facility.** Remove signed the device out
+    on the server (up to 10 s on a slow line) while the background sync kept running with that token; its "not
+    allowed" reply then made the app forget the facility in use **at that moment**, the other one, and Remove went
+    on to remove another. The owner saw "removing one facility removes all the others". The rule: **name the target
+    before anything slow** (the facility id, its token), pause background work during the change, and let a reply
+    act only on what it was about (a pass remembers the facility it started for and ignores its own answer once the
+    app has moved on). Any "current X" read after an `await` is a suspect.
+28. **A form box sized from the screen ("screen height - 100") was taller than its dialog on a phone**, so Save sat
+    half below the screen however far one scrolled. The same box was pasted into 17 forms. The fix lives in one
+    shared helper: on a phone the steps take their natural height with Save after them; the fixed box stays for PCs.
+29. **When you find a bug, look for the same pattern everywhere before calling it fixed.** The two above were in one
+    place and in 17 places; the owner asked for this explicitly. Search the code for the pattern (`grep` the
+    construct, not the screen's name), fix it in a shared place, and list what you checked.

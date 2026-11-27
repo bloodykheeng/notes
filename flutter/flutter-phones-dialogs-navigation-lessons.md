@@ -106,6 +106,15 @@ time. Read it with [flutter-engineering-standards-for-agents.md](flutter-enginee
   the lab requests page). One Add button in the list header, at every width.
 - **Old hand-built `DataTable` pages** scroll sideways on a phone; lists people work in (a visit's triages) become
   cards under 600 px, like the shared list widget.
+- **A form box sized from the screen hides Save in a full-screen dialog.** `SizedBox(height: screenHeight - 100)`
+  holding `[Expanded(steps), Save]` is taller than the dialog's room on a phone (status bar, environment strip, the
+  dialog's top bar), so Save sits half below the screen whatever you scroll. On a phone let the stacked steps take
+  their natural height with Save after them (no box, no `Expanded`); keep the box only where the steps sit side by
+  side. One helper for every stepped form (MRDRS had the same box pasted into 17).
+- **Header buttons stay on the right, on a phone too** (most people are right-handed): `Row(Expanded(title),
+  button)` with a short label ("Add"), never a `Wrap` that drops the button under the title on the left, and never a
+  long label that pushes the button off the screen.
+- **When one screen has a layout bug, grep for the same construct across the app** before calling it fixed.
 
 ## 9. Forms
 

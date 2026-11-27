@@ -112,6 +112,13 @@ follow this, I should not have to repeat myself.
 
 ## 7. Rules I have had to repeat (do them unasked)
 
+Working:
+- **Write every request down the moment it arrives**, mid-task included, as a row in the project's tracked list, then
+  carry on; never only answer in chat. Questions are rows too. How: [docs-and-requests-on-a-shared-project.md](docs-and-requests-on-a-shared-project.md).
+- **Add, create and new buttons sit on the right** of a list's toolbar or a header, on phones too (most people are
+  right-handed): use the shared button helper, never a header slot that lands on the left.
+- **A bug in one place: search for the same pattern everywhere** before calling it fixed.
+
 Data and API:
 - ULID keys; foreign keys `restrict` by default; audit columns on every table; an audit trail entry for every write.
 - **No escape hatches:** no JSON columns for lists, references or anything a report may count (tables with FKs);

@@ -65,6 +65,13 @@ proven line for field PCs), `window_manager` (already used for the custom title 
 - Start with Windows on by default (a facility PC comes back connected after a power cut), started with `--hidden`, so
   it opens in the tray: `main(List<String> args)` passes the args; skip `show()` at start when hidden.
 - No tray available (a locked-down PC): catch, turn prevent-close off, behave as a normal window.
+- **One copy at a time** (`windows_single_instance`, a named pipe, first thing in `main`): an app hidden in the tray is
+  invisible, so people double-click the shortcut again; a second copy would open the same database and run a second
+  sync loop. The second launch hands over to the running one, which comes to the front (`onSecondWindow` shows the
+  window and puts it back on the taskbar), and exits. One pipe name for every build that shares the data folder (our
+  test and production builds do).
+- Checked on a laptop: the menu, the tooltip with the sync state, the X hiding the window with the process still
+  running, Start with Windows registered as `uhfmris.exe --hidden` under `HKCU...CurrentVersionRun`.
 
 ## Situations to walk on real devices
 
@@ -87,3 +94,4 @@ proven line for field PCs), `window_manager` (already used for the custom title 
 - [ ] Channel created natively, white status-bar icon, `POST_NOTIFICATIONS`.
 - [ ] Windows: tray menu with the options, close and minimise behaviour, start with Windows hidden, a first-time
       notice, a fallback when there is no tray.
+- [ ] One copy at a time: a second launch brings the running one forward.

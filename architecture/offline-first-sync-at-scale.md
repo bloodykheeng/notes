@@ -68,10 +68,19 @@ How:
 ## The first sign-in on a new device
 
 - Check the person with the server **before** anything downloads (the server issues the device token only then).
-- Download only what sign-in needs first (staff, roles, permissions, settings), let the person in, and bring the rest
-  in the background with a window that shows a real percentage, what is coming down and the megabytes so far; it says
-  "waiting for the internet" when the connection drops and comes back when the app is reopened before it finished.
+- **Finish the whole first download before letting anyone in.** We first let people in after the staff tables and
+  brought the rest in the background. In testing that left a gap: someone opens Patients during the download, searches
+  for a returning patient who has not arrived yet, finds nothing and registers them twice; price lists and lab tests
+  may be missing too. It also split the download into two passes that fetched the sign-in tables twice. One pass on
+  the sign-in screen removes all of that; it happens once per device, usually at installation.
+- Show it properly on the sign-in screen: a real percentage, what is coming down and the megabytes so far. When the
+  connection drops say "waiting for the internet" and carry on by itself. Remember each finished table, so a retry
+  asks those only for changes. An app closed mid-download reopens on the download, never on half-empty screens.
 - Never a spinner or a bar sliding back and forth for something that takes minutes.
+- **Keep heavy local work away from the sign-in moment.** Seeding a big reference list (84,500 places) into the new
+  file right at sign-in froze the app for seconds; the download's first request timed out, the app showed "Offline"
+  while online, and the server never saw a failed request. Seed after the first download, in chunks of a few
+  thousand rows with a pause between, when the database runs on the UI thread.
 
 ## Security of the device copy
 
@@ -85,10 +94,9 @@ How:
 ## Two sync passes at once
 
 - Anything that starts a sync on a timer starts it the moment the device is enrolled, which can be in the middle of
-  the first sign-in's own download. Make the background pass **wait** for the sign-in step, and give the tables the
-  sign-in step finished their own cursor (the server's time before the pull), so the full pass asks them only for
-  changes. Found from the server's access log: two pulls of the staff table in the same second. A test that runs
-  the two steps one after the other never shows it; start them together, as the app does.
+  the first sign-in's own download. Keep the timer off until the first download is done (or share one in-flight
+  pass). Found from the server's access log: two pulls of the staff table in the same second. A test that runs the
+  two steps one after the other never shows it; start them together, as the app does.
 - A site removed from a device and added again must clear its old cursor and page markers, or the new empty file
   resumes mid-table or trusts an old "synced up to" and skips older rows.
 - On a PC, the test and production builds (and a developer's runs) can share one data folder: record which server
@@ -100,5 +108,7 @@ How:
 - [ ] Network cut and app killed mid-download: resumes, no duplicates.
 - [ ] Load test with two years of fake data: no table in one reply; page times flat; `EXPLAIN` checked.
 - [ ] Photos and files outside the pulls; API JSON compressed.
-- [ ] First sign-in quick, with a real progress window.
+- [ ] First download finished on the sign-in screen before anyone goes in, with real progress; resumes after a
+      dropped connection and after the app is closed.
+- [ ] Nothing heavy (seeding reference lists) runs on the UI thread while the first download starts.
 - [ ] Device database encrypted; lost devices can be revoked.

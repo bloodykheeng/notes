@@ -72,9 +72,22 @@ How:
 
 - The device keeps staff passwords only as bcrypt hashes (needed to sign in offline), never plain text; a stolen
   copy can still be attacked offline, so enforce decent passwords.
-- Patient records on a device are the real exposure: **encrypt the device database** (SQLCipher) with a key kept in
-  the platform's secure storage (Windows DPAPI, Android Keystore), and let an administrator revoke a lost device on
-  the server (it stops syncing at once).
+- Patient records on a device are the real exposure: **encrypt the device database** (SQLite3MultipleCiphers through
+  `package:sqlite3` 3.x; the SQLCipher Flutter package is end of life) with a key kept in the platform's secure
+  storage (Windows DPAPI, Android Keystore), converting existing plain files in place, and let an administrator
+  revoke a lost device on the server (it stops syncing at once). How: `flutter/encrypting-the-device-database.md`.
+
+## Two sync passes at once
+
+- Anything that starts a sync on a timer starts it the moment the device is enrolled, which can be in the middle of
+  the first sign-in's own download. Make the background pass **wait** for the sign-in step, and give the tables the
+  sign-in step finished their own cursor (the server's time before the pull), so the full pass asks them only for
+  changes. Found from the server's access log: two pulls of the staff table in the same second. A test that runs
+  the two steps one after the other never shows it; start them together, as the app does.
+- A site removed from a device and added again must clear its old cursor and page markers, or the new empty file
+  resumes mid-table or trusts an old "synced up to" and skips older rows.
+- On a PC, the test and production builds (and a developer's runs) can share one data folder: record which server
+  each saved account belongs to and list only the current server's.
 
 ## Checklist before go-live
 

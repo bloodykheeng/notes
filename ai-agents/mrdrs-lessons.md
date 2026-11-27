@@ -111,3 +111,11 @@ went wrong, why, and the rule now**, so the next system starts right. The projec
     owed), or open visits pile up for ever.
 18. **Check every link column, not just the usual name.** An "is this record empty?" check looked for children by
     `vid` only; one child table used `visit_id`, so a visit with notes passed as empty and could be deleted.
+19. **Make test accounts the way the product makes them** (the console or the models), never with raw SQL. A
+    hand-made account skipped the "last write" stamp, so devices that were syncing never received it, and it lacked
+    its role link, so it saw only the dashboard. Both looked like app bugs for an hour.
+20. **Agent habits that cost time:** a git worktree has none of the git-ignored files (signing keys, so the APK was
+    debug-signed and every install failed); after `adb install` check the installed version, never hide the output
+    with `| tail`; never mask secrets with `sed` on the way to the screen (read them file to file); on a phone, move
+    between fields with TAB, since taps miss once the keyboard shifts the layout; and clear a password field with
+    End plus backspaces before retyping, as select-all did not take.

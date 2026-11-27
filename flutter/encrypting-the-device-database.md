@@ -28,6 +28,18 @@ app (drift, ~60 tables, devices already in the field with plain databases), Nov 
   licence, no OpenSSL, ChaCha20-Poly1305 by default, and it encrypts an existing plain file in place
   (`PRAGMA rekey`). The binaries are downloaded at build time from the package's GitHub release and checked against
   hashes in the package, so the build machine needs internet.
+- **Windows: check the release folder has the DLL.** Build hooks put `sqlite3mc.dll` in `build/native_assets/windows/`;
+  only newer Flutter templates copy it beside the exe. A project made with an older template needs this in
+  `windows/CMakeLists.txt` (before the AOT library install), or the release has no SQLite at all while every unit
+  test passes (`flutter test` loads the library from the build folder):
+
+  ```cmake
+  set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
+  install(DIRECTORY "${NATIVE_ASSETS_DIR}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}" COMPONENT Runtime)
+  ```
+
+  Android was fine: the `.so` goes into the APK by itself. Check `build/windows/x64/runner/Release/` after the
+  first build, and test the real release on a laptop, not only the tests.
 - Upgrading drift from 2.20 to 2.35 resolved with no conflicts and regenerated the same files (we already used
   modular generation). Run the whole test suite after it.
 
@@ -80,6 +92,9 @@ Phones are 3 to 5 times slower: still fine for a one-off conversion and a start-
 ## Checklist
 
 - [ ] Encrypting build selected; `PRAGMA cipher` answers in a test.
+- [ ] Windows release folder holds `sqlite3mc.dll` (older templates: the CMake install block above).
+- [ ] On a real device: the old plain file converts, the numbers on screen match, no record text is readable in the
+      file, and it reopens after a restart.
 - [ ] Key per file in secure storage; key pragma first on every connection.
 - [ ] Conversion test with rows still in the WAL; no personal text readable in the converted file.
 - [ ] Wrong key refused; lost key handled (set aside, re-download), never a crash.

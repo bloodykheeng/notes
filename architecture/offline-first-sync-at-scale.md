@@ -23,6 +23,11 @@ are from a load test with a fake facility holding two years of a busy health cen
    or a device whose clock runs ahead silently misses rows.
 5. **A "what changed since" probe first**: one request lists the tables with changes, so an idle sync costs one
    request instead of one per table.
+6. **Every server-side write goes through the path that stamps the site's "last write"**, or the probe's idle fast
+   path ("last write not after your cursor: nothing changed") hides it for good: the device moves its cursor past
+   the row and never asks for it again. A data-fix command and a test account written with raw `UPDATE`/`INSERT`
+   both did this; the server's access log showed "nothing changed" replies seconds after the write. Raw writes in
+   commands must stamp the site too, and a test should prove an idle device is told about them.
 
 ## Pull in pages, never a whole table in one reply
 

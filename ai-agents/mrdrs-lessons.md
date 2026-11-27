@@ -167,3 +167,8 @@ UI-thread freeze); add to it as Track A (the fix) and Track B (the rebuild) go o
 29. **When you find a bug, look for the same pattern everywhere before calling it fixed.** The two above were in one
     place and in 17 places; the owner asked for this explicitly. Search the code for the pattern (`grep` the
     construct, not the screen's name), fix it in a shared place, and list what you checked.
+30. **"Is there a Laravel Echo for Flutter?" Check pub.dev's dates and platforms before following a tutorial.** The
+    tutorials (2020 to 2022) use `laravel_echo` / `flutter_laravel_echo` (Dart 3 incompatible, socket.io) or
+    `pusher_client` (no Windows). For Windows plus Android the pure-Dart `dart_pusher_channels` worked against Reverb
+    with the device token at `broadcasting/auth`; the newest version needed the app's `http` moved from 0.13 to 1.x.
+    Keep polling as the fallback so the socket can only help. How: [../flutter/realtime-reverb-from-flutter.md](../flutter/realtime-reverb-from-flutter.md).

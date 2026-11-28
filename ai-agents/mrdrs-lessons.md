@@ -177,3 +177,9 @@ UI-thread freeze); add to it as Track A (the fix) and Track B (the rebuild) go o
     helper. The fix: one map from status to colour per codebase (Flutter `StatusColors`, React `StatusTag`), one
     details-value widget that turns known statuses and yes/no flags into pills, and every details page routed
     through it. When adding a status, add it to both maps the same day; check the details view, not just the list.
+32. **Opening a screen must never write.** A patient details page stored the age worked out from the date of birth
+    every time it opened, and marked the row changed. In an offline-first app that syncs, a view became an edit:
+    the row went to every device, "Last changed" showed the viewing time, and with newest-edit-wins a device holding
+    an older copy could overwrite someone's real edit just by looking. Found only because a tester's "Last changed"
+    showed the minute the page was opened. Rule: a write from a screen's open or build compares first and writes only
+    a real change, or better, derive the value when shown. Search for writes in `initState` and page loads.

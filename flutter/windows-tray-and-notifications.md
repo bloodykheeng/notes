@@ -73,7 +73,7 @@ proven line for field PCs), `window_manager` (already used for the custom title 
 - Checked on a laptop: the menu, the tooltip with the sync state, the X hiding the window with the process still
   running, Start with Windows registered as `uhfmris.exe --hidden` under `HKCU...CurrentVersionRun`.
 - **Rebuilding while it sits in the tray fails** (`MSB3073 ... INSTALL.vcxproj`, exit code 1): the X no longer stops
-  the app, so the old exe in `buildwindowsdunnerRelease` is locked. Quit it from the tray menu (or
+  the app, so the old exe in `build\windows\x64\runner\Release` is locked. Quit it from the tray menu (or
   `Stop-Process -Name <exe>`) before `flutter build windows`. The same goes for installers: close it before updating.
 
 ## Situations to walk on real devices

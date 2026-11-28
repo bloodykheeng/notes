@@ -172,3 +172,8 @@ UI-thread freeze); add to it as Track A (the fix) and Track B (the rebuild) go o
     `pusher_client` (no Windows). For Windows plus Android the pure-Dart `dart_pusher_channels` worked against Reverb
     with the device token at `broadcasting/auth`; the newest version needed the app's `http` moved from 0.13 to 1.x.
     Keep polling as the fallback so the socket can only help. How: [../flutter/realtime-reverb-from-flutter.md](../flutter/realtime-reverb-from-flutter.md).
+31. **A status gets one colour everywhere: tables, details dialogs and view pages.** The tables had coloured pills
+    while the details showed "Is dead: Yes" as text, and five old details pages had their own label-and-text
+    helper. The fix: one map from status to colour per codebase (Flutter `StatusColors`, React `StatusTag`), one
+    details-value widget that turns known statuses and yes/no flags into pills, and every details page routed
+    through it. When adding a status, add it to both maps the same day; check the details view, not just the list.

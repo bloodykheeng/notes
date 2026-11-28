@@ -71,6 +71,26 @@ client.connect();
 - The socket id (`X-Socket-ID`, so the server's `toOthers()` skips the sender) is internal in this package; without it
   the sender gets its own signal and runs one cheap extra pass. Harmless.
 
+## Screens stay live (the app and the web console, both ways)
+
+The signal only helps if what is on screen follows the data. Seen on MRDRS (28 Nov 2026): a permission changed in the
+app reached the server in 3 s, but the console showed it only after closing and reopening the dialog, and the app's
+dialog the same the other way.
+
+- **Server:** the same "facility changed" event goes to the facility's devices *and* a private `console` channel
+  (`broadcastOn()` returns both; the payload carries `facility_id` and the tables). Authorise `console` for console
+  users only (`$user instanceof User && $user->tokenCan('console')`), never a device. Console writes go through the
+  models, so they broadcast too.
+- **Web console (Next.js):** one small client component in the dashboard layout: Laravel Echo (`broadcaster:
+  "reverb"`, pusher-js) with the Reverb key and host from `GET console/me` (no extra env), `authEndpoint:
+  <api>/broadcasting/auth` with the Bearer token; on `.facility.changed` call
+  `queryClient.invalidateQueries({ refetchType: "active" })`, debounced to once a second. Lists, details and dialogs
+  that use TanStack Query refresh by themselves.
+- **App (Flutter):** lists use drift `.watch()` streams, so a sync updates them. A dialog or page that loads once in
+  `initState` does not: listen to `db.tableUpdates(TableUpdateQuery.onAllTables([...]))` for its tables and reload,
+  but only when the user has no unsaved changes (keep what was loaded and compare).
+- **Unsaved edits win on screen**, never silently replaced; the save then goes through newest-edit-wins on the server.
+
 ## Every situation, and what happens (go through this list for any realtime feature)
 
 | Situation | What happens | Data safe? |

@@ -188,3 +188,7 @@ UI-thread freeze); add to it as Track A (the fix) and Track B (the rebuild) go o
     six console lists sorted by name, so a record just made appeared last. The owner's rule from every earlier project
     had not been written in coding-notes, so it was missed. Written down now (who-i-am-and-how-i-work.md section 7),
     with the deliberate exceptions (stock by expiry, name lookups A to Z).
+34. **Realtime to the devices is not realtime on screen.** Reverb told the devices within seconds, but the web console
+    had no socket at all and the app's permissions dialog loaded once, so both showed a change only after reopening.
+    Now: the console joins a private `console` channel and refreshes its queries on the signal; app dialogs that load
+    once reload on table updates when nothing is unsaved. Rule in who-i-am-and-how-i-work.md section 7.

@@ -126,6 +126,13 @@ Working:
   by soonest expiry (first expired, first out), and lookup lists people pick a name from (Ministry positions,
   districts, DHIS2 data elements, the fixed roles) A to Z with search. This rule held in every project before
   (NICE, Alpha, Letshego) and still had to be repeated on MRDRS (28 Nov 2026).
+- **What is on screen stays live, both ways, when online.** A change made on one side (the app, the web console,
+  another computer) shows on the other without closing and reopening anything: the server broadcasts a "something
+  changed" signal on Reverb (never the data), devices sync on it and their screens watch the local database; the web
+  console listens on its own private channel and refreshes the queries on screen (TanStack `invalidateQueries`,
+  active only, at most once a second). An open form or dialog with unsaved edits is never overwritten: it reloads only
+  when nothing is pending. Offline: nothing breaks, it catches up on the next sync. How:
+  [../flutter/realtime-reverb-from-flutter.md](../flutter/realtime-reverb-from-flutter.md) ("Screens stay live").
 
 Data and API:
 - ULID keys; foreign keys `restrict` by default; audit columns on every table; an audit trail entry for every write.

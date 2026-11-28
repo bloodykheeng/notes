@@ -118,6 +118,14 @@ Working:
 - **Add, create and new buttons sit on the right** of a list's toolbar or a header, on phones too (most people are
   right-handed): use the shared button helper, never a header slot that lands on the left.
 - **A bug in one place: search for the same pattern everywhere** before calling it fixed.
+- **Every list shows the newest first by default**: tables, cards, lists inside a record (a visit's diagnoses, notes,
+  lab results), record pickers, exports, in the app and the web console alike. The record someone just made must be
+  on top, not on page 20 of 100. The unsorted state of a 3-state column sort *is* that default, so put it in the query
+  (`created_at DESC`, then `id DESC` as the tie-break; UUID v7 ids are time-ordered), never only in the widget. A
+  query with no ORDER BY returns oldest first in practice: every list query needs one. Kept on purpose: stock batches
+  by soonest expiry (first expired, first out), and lookup lists people pick a name from (Ministry positions,
+  districts, DHIS2 data elements, the fixed roles) A to Z with search. This rule held in every project before
+  (NICE, Alpha, Letshego) and still had to be repeated on MRDRS (28 Nov 2026).
 
 Data and API:
 - ULID keys; foreign keys `restrict` by default; audit columns on every table; an audit trail entry for every write.

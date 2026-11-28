@@ -215,6 +215,9 @@ Each repo has its own `CLAUDE.md` / `AGENTS.md` and `.claude/skills`; the worksp
 - **State lives in the URL**: page, page size, search, filters, sort (`?sort=-created_at`), so a refresh or a shared
   link reopens the same view. Push with `{ scroll: false }` so paging keeps the reader's place.
 - **3-state column sort**: ascending → descending → off (back to the default), on the API field name.
+- **The default is newest first**: every index endpoint's default sort is `created_at desc` (then `id desc`), so "off"
+  shows the record just made on top. Lookup lists people pick a name from stay A to Z. See
+  [who-i-am-and-how-i-work.md](who-i-am-and-how-i-work.md) section 7.
 - **Status chips** above the list with counts from the API (one `StatusCounts` query), and **one Filters button**
   opening one row form for every other filter (dates as `start_date` / `end_date` end to end); applied filters show
   as removable chips.

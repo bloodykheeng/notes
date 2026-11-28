@@ -145,6 +145,10 @@ Sources: [Windows push notifications overview](https://learn.microsoft.com/en-us
 - One design system in `lib/theme/` (Material 3, `ColorScheme.fromSeed`, one bundled font, light and dark) and one app
   shell (sidebar / drawer, top bar with tenant, user and a **sync indicator**: All sent · 3 waiting · Offline · Live).
 - Check with screenshots at 1536×745 and 1920×1080, light and dark, with realistic data, and on a phone.
+- **Every list newest first by default, in the drift query** (`..orderBy([(t) => OrderingTerm.desc(t.created),
+  (t) => OrderingTerm.desc(t.id)])`), lists inside a record too. A drift `select` with no `orderBy` returns rows in
+  insertion order (oldest first), and a `..limit(50)` with no order shows the oldest 50. MRDRS had about 20 such
+  queries (28 Nov 2026). Exceptions on purpose: stock by soonest expiry; name lookups A to Z.
 
 ## 8. Permissions in one place (Planned)
 

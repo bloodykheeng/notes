@@ -183,3 +183,8 @@ UI-thread freeze); add to it as Track A (the fix) and Track B (the rebuild) go o
     an older copy could overwrite someone's real edit just by looking. Found only because a tester's "Last changed"
     showed the minute the page was opened. Rule: a write from a screen's open or build compares first and writes only
     a real change, or better, derive the value when shown. Search for writes in `initState` and page loads.
+33. **Newest first is the default order of every list, and it lives in the query.** About 20 app list queries had no
+    ORDER BY (users, positions, insurers, stock items with a limit of 50, a visit's diagnoses and lab results...) and
+    six console lists sorted by name, so a record just made appeared last. The owner's rule from every earlier project
+    had not been written in coding-notes, so it was missed. Written down now (who-i-am-and-how-i-work.md section 7),
+    with the deliberate exceptions (stock by expiry, name lookups A to Z).
